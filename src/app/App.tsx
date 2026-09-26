@@ -7,6 +7,8 @@ import { EasterEggProvider } from '@/components/animations/EasterEggs';
 import { useApplyTheme } from '@/hooks/useTheme';
 import { AppRoutes } from './routes';
 import { StartupScreen } from './StartupScreen';
+import { LockScreen } from '@/features/lock/LockScreen';
+import { hasAccess } from '@/features/lock/access';
 
 /** Router basename follows Vite's base (e.g. "/Steam-game1/" on GitHub Pages). */
 const basename = import.meta.env.BASE_URL.replace(/\/$/, '') || '/';
@@ -14,8 +16,14 @@ const basename = import.meta.env.BASE_URL.replace(/\/$/, '') || '/';
 type Boot = { state: 'loading' } | { state: 'ready' } | { state: 'failed'; message: string };
 
 export function App() {
-  const [boot, setBoot] = useState<Boot>({ state: 'loading' });
+  const [unlocked, setUnlocked] = useState(hasAccess);
   useApplyTheme();
+  if (!unlocked) return <LockScreen onUnlock={() => setUnlocked(true)} />;
+  return <UnlockedApp />;
+}
+
+function UnlockedApp() {
+  const [boot, setBoot] = useState<Boot>({ state: 'loading' });
 
   useEffect(() => {
     ensureSeeded().then(

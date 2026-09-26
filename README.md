@@ -68,6 +68,21 @@ Details:
 - SPA-Routing: Beim Build wird `index.html` nach `404.html` kopiert, damit Deep Links wie `/anime` funktionieren.
 - Lokal einen Pages-Build testen: `BASE_PATH=/dennis-nadine/ npm run build && BASE_PATH=/dennis-nadine/ npm run preview`.
 
+## Passwortschutz
+
+Die Seite kann mit einem Passwort geschützt werden, bevor man sie betritt:
+
+1. Repository → **Settings → Secrets and variables → Actions → New repository secret**
+   Name: `APP_PASSWORD`, Wert: euer Passwort.
+2. Optional unter **Variables** `APP_PASSWORD_HINT` anlegen (Tipp, der nach einem Fehlversuch erscheint).
+3. Workflow neu starten (Actions → „Build & Deploy“ → „Run workflow“) oder einfach pushen.
+
+Das Passwort selbst steht nirgends im Code: Beim Build wird daraus ein PBKDF2-Hash (210 000 Runden) erzeugt, nur der landet in der Seite. „Angemeldet bleiben“ merkt sich den Zugang auf dem Gerät; „Jetzt sperren“ in den Einstellungen meldet wieder ab. Ohne Secret gibt es keine Sperre.
+
+Hinweis: Das ist ein leichter Schutz gegen zufällige Besucher einer statischen Seite, kein Server-Login. Eure Einträge liegen ohnehin nur lokal in euren Browsern und sind über die Seite nie für andere sichtbar.
+
+Lokal testen: `APP_PASSWORD=geheim npm run dev`.
+
 ## Datenhaltung
 
 Alle Daten liegen **ausschließlich im Browser** in IndexedDB (Datenbank `dennis-nadine`), niemals auf einem Server.
