@@ -5,7 +5,8 @@ import { ChipGroup, FormGrid, NumberField, SelectField, TextAreaField, TextField
 import { TagInput } from '@/components/ui/TagInput';
 import { RatingsEditor } from '@/components/ui/RatingStars';
 import { useDraft } from '@/hooks/useDraft';
-import { hasErrors, optional, requiredError, urlError } from '@/lib/validation';
+import { hasErrors, imageError, optional, requiredError } from '@/lib/validation';
+import { ImageField } from '../image-search/ImageField';
 import { ANIME_STATUS_META, GENRE_SUGGESTIONS } from './config';
 
 interface AnimeFormProps {
@@ -33,7 +34,7 @@ export function AnimeForm({ anime, onClose, onSave }: AnimeFormProps) {
     ratings: { dennisRating: anime?.dennisRating, nadineRating: anime?.nadineRating, sharedRating: anime?.sharedRating } as Ratings,
   }));
 
-  const errors = { title: requiredError(draft.title, 'Der Titel'), coverUrl: urlError(draft.coverUrl) };
+  const errors = { title: requiredError(draft.title, 'Der Titel'), coverUrl: imageError(draft.coverUrl) };
 
   const submit = async () => {
     markSubmitted();
@@ -61,16 +62,25 @@ export function AnimeForm({ anime, onClose, onSave }: AnimeFormProps) {
         <SelectField label="Status" value={draft.status} options={STATUS_OPTIONS} onChange={(v) => set('status', v)} />
         <NumberField label="Anzahl Episoden" value={draft.episodes} min={0} onChange={(v) => set('episodes', v)} />
         <TextField label="Gesehen am" type="date" value={draft.watchedAt} onChange={(v) => set('watchedAt', v)} />
-        <TextField
-          label="Cover URL"
-          type="url"
-          inputMode="url"
-          placeholder="https://…"
-          value={draft.coverUrl}
-          onChange={(v) => set('coverUrl', v)}
-          error={submitted ? errors.coverUrl : undefined}
-        />
+
       </FormGrid>
+      <ImageField
+        label="Cover"
+        value={draft.coverUrl}
+        onChange={(v) => set('coverUrl', v)}
+        error={submitted ? errors.coverUrl : undefined}
+        fallbackEmoji="🎬"
+        search={{
+          domain: 'anime',
+          query: draft.title,
+          onPick: ({ meta }) =>
+            setDraft((d) => ({
+              ...d,
+              episodes: d.episodes ?? meta?.episodes,
+              genres: d.genres.length ? d.genres : (meta?.genres ?? []).slice(0, 4),
+            })),
+        }}
+      />
       <TagInput label="Genre" value={draft.genres} onChange={(v) => set('genres', v)} suggestions={GENRE_SUGGESTIONS} />
       <ChipGroup label="Wessen Wunsch?" options={PERSON_OPTIONS} value={draft.interestedBy} onChange={(v) => set('interestedBy', v)} />
       <RatingsEditor value={draft.ratings} onChange={(ratings) => setDraft((d) => ({ ...d, ratings }))} />

@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/Button';
 import { MediaPreview } from '@/components/media/MediaPreview';
 import { useDraft } from '@/hooks/useDraft';
 import { canFetchPreview, fetchOEmbedPreview } from '@/lib/social';
-import { hasErrors, optional, requiredError, urlError } from '@/lib/validation';
+import { hasErrors, imageError, optional, requiredError, urlError } from '@/lib/validation';
+import { ImageField } from '../image-search/ImageField';
 import { cn } from '@/lib/cn';
 import { RECIPE_CATEGORY_META } from './config';
 
@@ -50,7 +51,7 @@ export function RecipeForm({ recipe, onClose, onSave }: RecipeFormProps) {
   const errors = {
     title: requiredError(draft.title, social ? 'Der Titel' : 'Der Name'),
     socialUrl: social ? (requiredError(draft.socialUrl, 'Der Link') ?? urlError(draft.socialUrl)) : urlError(draft.socialUrl),
-    imageUrl: urlError(draft.imageUrl),
+    imageUrl: imageError(draft.imageUrl),
   };
 
   const loadPreview = async () => {
@@ -170,18 +171,19 @@ export function RecipeForm({ recipe, onClose, onSave }: RecipeFormProps) {
 
       <FormGrid>
         <SelectField label="Kategorie" value={draft.category} options={CATEGORY_OPTIONS} onChange={(v) => set('category', v)} />
-        <TextField
-          label={social ? 'Vorschaubild URL (optional)' : 'Bild URL'}
-          type="url"
-          inputMode="url"
-          placeholder="https://…"
-          value={draft.imageUrl}
-          onChange={(v) => set('imageUrl', v)}
-          error={submitted ? errors.imageUrl : undefined}
-        />
+
         <NumberField label="Portionen" value={draft.servings} min={0} onChange={(v) => set('servings', v)} />
         <NumberField label="Zubereitungszeit (Minuten)" value={draft.prepMinutes} min={0} onChange={(v) => set('prepMinutes', v)} />
       </FormGrid>
+
+      <ImageField
+        label={social ? 'Vorschaubild' : 'Bild'}
+        value={draft.imageUrl}
+        onChange={(v) => set('imageUrl', v)}
+        error={submitted ? errors.imageUrl : undefined}
+        fallbackEmoji={RECIPE_CATEGORY_META[draft.category].emoji}
+        search={{ domain: 'recipe', query: draft.title }}
+      />
 
       <div className="grid gap-2 sm:grid-cols-2">
         <SwitchField label="🌱 Vegetarisch" checked={draft.vegetarian} onChange={(v) => set('vegetarian', v)} />

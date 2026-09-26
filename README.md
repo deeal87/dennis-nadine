@@ -12,12 +12,13 @@ Ein kleines digitales Zuhause für zwei: Anime, Rezepte, Dates, Sammlungen, Erin
 | 🏠 **Home** | Hero mit schwebenden Herzen, Sternen & Blättern, „Tag X unserer Geschichte“, Live-Zahlen aus der Datenbank, „Was machen wir heute?“ (Date-Roulette, Anime/Rezept auslosen, Überraschung), Top 3, Bucket-Fortschritt, Timeline-Vorschau |
 | 🎬 **Anime** (`/anime`) | CRUD, Status (Geplant … Abgebrochen), Genres, Bewertungen Dennis/Nadine/gemeinsam, Filter, **Top 3 mit Drag & Drop**. Startet mit unseren Anime-Interessen (nicht als gesehen markiert) |
 | 🍜 **Rezepte** (`/rezepte`) | TikTok-/Social-Link *oder* manuelles Rezept, dynamische Zutaten & nummerierte Schritte, Favoriten, Filter (Favoriten, Schnell, Vegetarisch, Dessert, Hauptgericht …), Detailseite mit abhakbaren Zutaten |
-| 📍 **Dates** (`/dates`) | Orte, Übernachtungen, Shopping, Restaurants, Aktivitäten · „Bereits erlebt“ / „Noch ausprobieren“ · Google-Maps-Button + optionale Karte · **Date-Roulette** mit Countdown, Flip-Animation und erweiterbaren Filtern |
+| 📍 **Dates** (`/dates`) | Orte, Übernachtungen, Shopping, Restaurants, Aktivitäten · „Bereits erlebt“ / „Noch ausprobieren“ · Google-Maps-Button + optionale Karte · **Date-Roulette** mit Countdown & Flip-Animation: aus *unseren Orten* oder **Neu entdecken** (Art + Bundesland + optional Stadt → zufälliger echter Ort aus OpenStreetMap, mit einem Klick speicherbar) |
 | 🎁 **Funko Pops** (`/funkos`) | Sammlung, Favoriten, Wunschliste, **Wishlist Top 10 (Drag & Drop)**, **Serien-Fortschritt** („Dragon Ball 7 / 15“ + „Noch nicht in unserer Sammlung“), **Per Foto erfassen** |
 | 🧱 **LEGO** (`/lego`) | Gleiche Funktionen wie Funko (Themes statt Serien, Set-Nummer, Teile) |
 | 📸 **Memories** (`/memories`) | Masonry-Galerie, Instagram-/TikTok-Vorschau mit sicherem Fallback |
 | 💞 **Timeline** (`/timeline`) | Romantischer Zeitstrahl, startet mit dem 09.09.2026 |
 | 🌠 **Bucket List** (`/bucket-list`) | Kategorien, Priorität, Erledigt-Status, Fortschrittsbalken |
+| 🖼️ **Bilder** | Jedes Bildfeld: Link, **eigenes Foto** (lokal gespeichert) oder **passendes Online-Bild** – Vorschläge erscheinen schon beim Tippen. Anime-Cover „automatisch finden“ für alle Einträge ohne Bild |
 | 🔍 **Suche** | Global über alle Bereiche · <kbd>Strg</kbd>/<kbd>⌘</kbd> + <kbd>K</kbd> · auf Mobile über die Lupe |
 | ⚙️ **Einstellungen** | Hell / Dunkel / System, Backup-Export/-Import, Reset, Speicher dauerhaft schützen |
 
@@ -28,6 +29,8 @@ Außerdem: Löschen immer mit Bestätigung **und** „Rückgängig“, schöne E
 - **Social Previews:** Instagram/TikTok erlauben nicht jedes Embed. Deshalb gibt es immer eine Link-Karte; der offizielle Player lädt nur auf Knopfdruck („Hier abspielen“). Titel & Vorschaubild können optional per TikTok-oEmbed geholt werden – nur auf ausdrücklichen Klick.
 - **Bilderkennung:** Es ist keine Vision-API eingebaut. „Per Foto erfassen“ zeigt das Foto als Spickzettel und eine schnelle Bestätigungsliste. Eine echte Erkennung lässt sich später über `registerRecognitionProvider()` in `src/features/collection/recognition.ts` anschließen.
 - **Karten:** Keine Google-Maps-API nötig. Die Kartenvorschau lädt erst, wenn man sie öffnet.
+- **Online-Bilder:** Nur öffentliche, schlüsselfreie Quellen – MyAnimeList (Jikan) / AniList für Anime, Wikipedia & Wikimedia Commons für Orte, TheMealDB & Commons für Rezepte, Rebrickable/Brickset-Setbilder per Set-Nummer. Für Funko Pops gibt es keine freie Bilddatenbank; dort ist ein eigenes Foto meist die beste Wahl. Vorschläge sind Vorschläge – ihr wählt aus.
+- **Neu entdecken:** Die Orte kommen live aus OpenStreetMap (Overpass API). Öffnungszeiten o. Ä. sind nicht garantiert – vor dem Date kurz prüfen.
 
 ## Tech Stack
 
@@ -101,7 +104,7 @@ Format:
 
 ## Datenschutz
 
-Keine Accounts, kein Backend, keine Analytics, kein Tracking. Externe Inhalte (Bilder per URL, Karten, Embeds, optionale TikTok-Vorschau) werden nur geladen, wenn ihr sie selbst eintragt bzw. öffnet. Bilder werden mit `referrerpolicy="no-referrer"` geladen.
+Keine Accounts, kein Backend, keine Analytics, kein Tracking. Hochgeladene Fotos bleiben im Browser (und im Backup). Für Bildvorschläge und „Neu entdecken“ werden nur Suchbegriffe (Titel, Ort, Bundesland) an die genannten öffentlichen Dienste geschickt; automatische Vorschläge lassen sich in den Einstellungen abschalten. Karten, Embeds und die optionale TikTok-Vorschau laden nur auf Klick. Bilder werden mit `referrerpolicy="no-referrer"` geladen.
 
 ## Projektstruktur
 
@@ -144,4 +147,6 @@ dennis-nadine/
 - **Neuer Roulette-Filter:** Eintrag in `ROULETTE_FILTERS` (`features/dates/roulette.ts`).
 - **Neue Listenfilter:** `FilterDef`-Arrays in den jeweiligen `config.ts`.
 - **Bilderkennung:** `RecognitionProvider` implementieren und registrieren.
+- **Neue Bildquelle:** Provider in `features/image-search/providers.ts`, Zuordnung in `search.ts`.
+- **Neue „Neu entdecken“-Art:** Eintrag in `DISCOVER_TYPES` (`features/discover/config.ts`) mit OpenStreetMap-Tags.
 - **Neues Datenfeld:** Typ in `types/models.ts`, Schema in `data/backup/schema.ts`, Formular im Feature.

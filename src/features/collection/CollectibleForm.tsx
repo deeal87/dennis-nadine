@@ -4,7 +4,8 @@ import type { Draft } from '@/data/repositories';
 import { FormModal } from '@/components/ui/FormModal';
 import { Field, FormGrid, SelectField, SwitchField, TextAreaField, TextField, inputClass } from '@/components/ui/form';
 import { useDraft } from '@/hooks/useDraft';
-import { hasErrors, optional, requiredError, urlError } from '@/lib/validation';
+import { hasErrors, imageError, optional, requiredError } from '@/lib/validation';
+import { ImageField } from '../image-search/ImageField';
 import type { CollectibleItem, CollectionConfig, ExtraField } from './types';
 
 interface CollectibleFormProps<T extends CollectibleItem> {
@@ -42,7 +43,7 @@ export function CollectibleForm<T extends CollectibleItem>({ config, item, prese
     extras: initialExtras(config.extraFields, item, preset),
   }));
 
-  const errors = { name: requiredError(draft.name, 'Der Name'), imageUrl: urlError(draft.imageUrl) };
+  const errors = { name: requiredError(draft.name, 'Der Name'), imageUrl: imageError(draft.imageUrl) };
   const setExtra = (key: string, value: string) => set('extras', { ...draft.extras, [key]: value });
 
   const submit = async () => {
@@ -91,16 +92,20 @@ export function CollectibleForm<T extends CollectibleItem>({ config, item, prese
           </Field>
         ))}
         <SelectField label="Besitzstatus" value={draft.status} options={STATUS_OPTIONS} onChange={(v) => set('status', v)} />
-        <TextField
-          label="Bild URL"
-          type="url"
-          inputMode="url"
-          placeholder="https://…"
-          value={draft.imageUrl}
-          onChange={(v) => set('imageUrl', v)}
-          error={submitted ? errors.imageUrl : undefined}
-        />
+
       </FormGrid>
+      <ImageField
+        label="Bild"
+        value={draft.imageUrl}
+        onChange={(v) => set('imageUrl', v)}
+        error={submitted ? errors.imageUrl : undefined}
+        fallbackEmoji={config.emoji}
+        search={{
+          domain: config.domain,
+          query: [draft.name, draft.extras[config.groupKey]].filter(Boolean).join(' '),
+          context: { setNumber: config.domain === 'lego' ? draft.extras[config.numberKey] : undefined },
+        }}
+      />
       <datalist id={listId}>
         {groups.map((group) => (
           <option key={group} value={group} />

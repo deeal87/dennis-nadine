@@ -52,7 +52,9 @@ function ModalDialog({ onClose, title, description, children, footer, size = 'md
       aria-labelledby={titleId}
       aria-describedby={description ? descriptionId : undefined}
       onCancel={(event) => {
+        // React bubbles synthetic events through nested dialogs – only the top one closes.
         event.preventDefault();
+        event.stopPropagation();
         onClose();
       }}
       onClick={(event) => {

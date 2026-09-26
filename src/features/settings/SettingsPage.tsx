@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
 import { STORE_NAMES } from '@/data/database';
-import { useStore } from '@/hooks/useStore';
+import { useSettings, useStore } from '@/hooks/useStore';
+import { settingsRepository } from '@/data/repositories';
+import { SwitchField } from '@/components/ui/form';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
@@ -36,6 +38,7 @@ function CountRow({ store }: { store: (typeof STORE_NAMES)[number] }) {
 export default function SettingsPage() {
   useDocumentTitle('Einstellungen');
   const storage = useStorageStatus();
+  const { autoImageSuggestions = true } = useSettings();
 
   return (
     <>
@@ -54,8 +57,9 @@ export default function SettingsPage() {
             <ShieldCheck className="size-5 text-mint" aria-hidden /> Datenschutz
           </h2>
           <p className="text-sm text-muted">
-            Keine Accounts, kein Tracking, keine Analytics. Alles bleibt lokal in eurem Browser (IndexedDB). Externe Inhalte wie Karten oder
-            eingebettete Videos werden nur geladen, wenn ihr sie öffnet.
+            Keine Accounts, kein Tracking, keine Analytics. Alles bleibt lokal in eurem Browser (IndexedDB) – auch hochgeladene Fotos. Für
+            Bildvorschläge und „Neu entdecken“ werden nur Suchbegriffe (Titel, Ort, Bundesland) an öffentliche Dienste wie MyAnimeList,
+            Wikipedia oder OpenStreetMap geschickt. Karten und Videos laden erst, wenn ihr sie öffnet.
           </p>
           {storage.supported && (
             <div className="flex flex-wrap items-center gap-3 text-sm">
@@ -69,6 +73,22 @@ export default function SettingsPage() {
               {storage.usage && <span className="text-muted">Belegt: {storage.usage}</span>}
             </div>
           )}
+        </section>
+
+        <section className="card flex flex-col gap-3 p-5 sm:p-6 lg:col-span-2" aria-labelledby="images-title">
+          <h2 id="images-title" className="text-xl font-semibold">
+            🖼️ Bilder
+          </h2>
+          <p className="text-sm text-muted">
+            Anime-Cover kommen von MyAnimeList/AniList, Orte und Gerichte von Wikipedia, Wikimedia Commons und TheMealDB, LEGO-Sets über die
+            Set-Nummer. Eigene Fotos gehen überall.
+          </p>
+          <SwitchField
+            label="Bilder automatisch vorschlagen"
+            description="Beim Eintippen eines Titels passende Bilder zeigen"
+            checked={autoImageSuggestions}
+            onChange={(value) => void settingsRepository.update({ autoImageSuggestions: value })}
+          />
         </section>
 
         <div className="lg:col-span-2">

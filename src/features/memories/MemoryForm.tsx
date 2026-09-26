@@ -4,7 +4,8 @@ import { FormModal } from '@/components/ui/FormModal';
 import { FormGrid, SelectField, TextAreaField, TextField } from '@/components/ui/form';
 import { useDraft } from '@/hooks/useDraft';
 import { detectPlatform } from '@/lib/social';
-import { hasErrors, optional, requiredError, urlError } from '@/lib/validation';
+import { hasErrors, imageError, optional, requiredError, urlError } from '@/lib/validation';
+import { ImageField } from '../image-search/ImageField';
 import { MEMORY_CATEGORY_META } from './config';
 
 interface MemoryFormProps {
@@ -34,7 +35,7 @@ export function MemoryForm({ memory, onClose, onSave }: MemoryFormProps) {
     title: requiredError(draft.title, 'Der Titel'),
     instagramUrl: platformError(draft.instagramUrl, 'instagram', 'Instagram'),
     tiktokUrl: platformError(draft.tiktokUrl, 'tiktok', 'TikTok'),
-    imageUrl: urlError(draft.imageUrl),
+    imageUrl: imageError(draft.imageUrl),
   };
   const show = (key: keyof typeof errors) => (submitted ? errors[key] : undefined);
 
@@ -63,7 +64,7 @@ export function MemoryForm({ memory, onClose, onSave }: MemoryFormProps) {
         <SelectField label="Kategorie" value={draft.category} options={CATEGORY_OPTIONS} onChange={(v) => set('category', v)} />
       </FormGrid>
       <TextAreaField label="Beschreibung" value={draft.description} onChange={(v) => set('description', v)} rows={4} />
-      <TextField label="Bild URL" type="url" inputMode="url" placeholder="https://…" value={draft.imageUrl} onChange={(v) => set('imageUrl', v)} error={show('imageUrl')} />
+      <ImageField label="Foto" value={draft.imageUrl} onChange={(v) => set('imageUrl', v)} error={show('imageUrl')} fallbackEmoji="📸" />
       <FormGrid>
         <TextField
           label="Instagram URL"

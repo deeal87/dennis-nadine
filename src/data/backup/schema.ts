@@ -29,6 +29,9 @@ type Schema = Record<string, FieldSpec>;
 const MAX_TEXT = 20_000;
 const rating: FieldSpec = { type: 'number', min: 0, max: 5 };
 const optionalText: FieldSpec = { type: 'string', max: MAX_TEXT };
+/** Image fields may hold an uploaded photo as data URL. */
+const MAX_IMAGE = 4_000_000;
+const optionalImage: FieldSpec = { type: 'string', max: MAX_IMAGE };
 const requiredText: FieldSpec = { type: 'string', required: true, max: MAX_TEXT };
 const optionalDate: FieldSpec = { type: 'string', format: 'date' };
 
@@ -41,7 +44,7 @@ const base: Schema = {
 const collectible: Schema = {
   ...base,
   name: requiredText,
-  imageUrl: optionalText,
+  imageUrl: optionalImage,
   status: { type: 'string', required: true, enum: ['owned', 'wishlist'] },
   favorite: { type: 'boolean', required: true },
   notes: optionalText,
@@ -51,7 +54,7 @@ export const SCHEMAS: Record<StoreName, Schema> = {
   anime: {
     ...base,
     title: requiredText,
-    coverUrl: optionalText,
+    coverUrl: optionalImage,
     genres: { type: 'stringArray', required: true },
     status: { type: 'string', required: true, enum: ANIME_STATUSES },
     dennisRating: rating,
@@ -67,7 +70,7 @@ export const SCHEMAS: Record<StoreName, Schema> = {
     kind: { type: 'string', required: true, enum: ['social', 'manual'] },
     title: requiredText,
     description: optionalText,
-    imageUrl: optionalText,
+    imageUrl: optionalImage,
     category: { type: 'string', required: true, enum: RECIPE_CATEGORIES },
     vegetarian: { type: 'boolean', required: true },
     favorite: { type: 'boolean', required: true },
@@ -95,7 +98,7 @@ export const SCHEMAS: Record<StoreName, Schema> = {
     sharedRating: rating,
     priceRange: { type: 'number', min: 1, max: 4, integer: true },
     notes: optionalText,
-    photoUrl: optionalText,
+    photoUrl: optionalImage,
   },
   funkos: {
     ...collectible,
@@ -128,14 +131,14 @@ export const SCHEMAS: Record<StoreName, Schema> = {
     category: { type: 'string', required: true, enum: MEMORY_CATEGORIES },
     instagramUrl: optionalText,
     tiktokUrl: optionalText,
-    imageUrl: optionalText,
+    imageUrl: optionalImage,
   },
   timeline: {
     ...base,
     date: { type: 'string', required: true, format: 'date' },
     title: requiredText,
     description: optionalText,
-    imageUrl: optionalText,
+    imageUrl: optionalImage,
     category: { type: 'string', required: true, enum: TIMELINE_CATEGORIES },
   },
   bucket: {
@@ -156,6 +159,8 @@ export const SCHEMAS: Record<StoreName, Schema> = {
     id: { type: 'string', required: true, enum: ['settings'] },
     theme: { type: 'string', required: true, enum: ['light', 'dark', 'system'] },
     seededAt: { type: 'string', format: 'timestamp' },
+    autoImageSuggestions: { type: 'boolean' },
+    discoverRegion: { type: 'string', max: 10 },
   },
 };
 

@@ -4,7 +4,8 @@ import { FormModal } from '@/components/ui/FormModal';
 import { FormGrid, SelectField, TextAreaField, TextField } from '@/components/ui/form';
 import { useDraft } from '@/hooks/useDraft';
 import { isIsoDate, todayIso } from '@/lib/date';
-import { hasErrors, optional, requiredError, urlError } from '@/lib/validation';
+import { hasErrors, imageError, optional, requiredError } from '@/lib/validation';
+import { ImageField } from '../image-search/ImageField';
 import { TIMELINE_CATEGORY_META } from './config';
 
 interface TimelineFormProps {
@@ -26,7 +27,7 @@ export function TimelineForm({ event, onClose, onSave }: TimelineFormProps) {
   const errors = {
     title: requiredError(draft.title, 'Der Titel'),
     date: isIsoDate(draft.date) ? undefined : 'Bitte ein Datum wählen.',
-    imageUrl: urlError(draft.imageUrl),
+    imageUrl: imageError(draft.imageUrl),
   };
 
   const submit = async () => {
@@ -46,7 +47,7 @@ export function TimelineForm({ event, onClose, onSave }: TimelineFormProps) {
       </FormGrid>
       <TextField label="Titel" value={draft.title} onChange={(v) => set('title', v)} error={submitted ? errors.title : undefined} autoFocus />
       <TextAreaField label="Beschreibung" value={draft.description} onChange={(v) => set('description', v)} rows={4} />
-      <TextField label="Bild URL" type="url" inputMode="url" placeholder="https://…" value={draft.imageUrl} onChange={(v) => set('imageUrl', v)} error={submitted ? errors.imageUrl : undefined} />
+      <ImageField label="Foto" value={draft.imageUrl} onChange={(v) => set('imageUrl', v)} error={submitted ? errors.imageUrl : undefined} fallbackEmoji="💞" />
     </FormModal>
   );
 }

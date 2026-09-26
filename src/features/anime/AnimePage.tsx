@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { ImageDown, Plus } from 'lucide-react';
 import type { Anime } from '@/types/models';
 import { animeRepository } from '@/data/repositories';
 import { useStore } from '@/hooks/useStore';
@@ -24,6 +24,7 @@ import { ANIME_FILTERS, ANIME_STATUS_META } from './config';
 import { AnimeCard } from './AnimeCard';
 import { AnimeForm } from './AnimeForm';
 import { InterestBadges } from './InterestBadges';
+import { useFindCovers } from './useFindCovers';
 
 const STATUS_ORDER = { watching: 0, planned: 1, paused: 2, completed: 3, dropped: 4 } as const;
 
@@ -34,6 +35,8 @@ export default function AnimePage() {
   const detail = useDetailParam();
   const actions = useEntityActions(animeRepository, 'Anime');
   const [filter, setFilter] = useState('all');
+  const covers = useFindCovers();
+  const missingCovers = items.filter((a) => !a.coverUrl).length;
 
   const ids = useMemo(() => items.map((a) => a.id), [items]);
   const top3 = useRankingActions('anime-top3', ids);
@@ -66,9 +69,16 @@ export default function AnimePage() {
         title="Unsere Anime-Welt"
         subtitle="Was wir schauen, geschaut haben und unbedingt noch schauen wollen."
         actions={
-          <Button icon={Plus} onClick={editor.openNew}>
-            Anime hinzufügen
-          </Button>
+          <>
+            {missingCovers > 0 && (
+              <Button variant="secondary" icon={ImageDown} onClick={() => void covers.run(items)} disabled={covers.running}>
+                {covers.progress ? `Suche Cover … ${covers.progress.done}/${covers.progress.total}` : `${missingCovers} Cover automatisch finden`}
+              </Button>
+            )}
+            <Button icon={Plus} onClick={editor.openNew}>
+              Anime hinzufügen
+            </Button>
+          </>
         }
       />
 

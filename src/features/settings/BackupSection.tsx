@@ -10,7 +10,7 @@ import { downloadJson } from '@/lib/download';
 import { formatDate } from '@/lib/date';
 import { STORE_LABELS } from './storeLabels';
 
-const MAX_IMPORT_BYTES = 20 * 1024 * 1024;
+const MAX_IMPORT_BYTES = 300 * 1024 * 1024;
 const RESET_WORD = 'LÖSCHEN';
 
 export function BackupSection() {

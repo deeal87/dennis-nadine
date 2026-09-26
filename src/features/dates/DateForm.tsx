@@ -4,7 +4,8 @@ import { FormModal } from '@/components/ui/FormModal';
 import { ChipGroup, FormGrid, SelectField, TextAreaField, TextField } from '@/components/ui/form';
 import { RatingsEditor } from '@/components/ui/RatingStars';
 import { useDraft } from '@/hooks/useDraft';
-import { hasErrors, optional, requiredError, urlError } from '@/lib/validation';
+import { hasErrors, imageError, optional, requiredError, urlError } from '@/lib/validation';
+import { ImageField } from '../image-search/ImageField';
 import { isGoogleMapsUrl } from '@/lib/maps';
 import { DATE_CATEGORY_META, DATE_TAG_META, PRICE_LABELS } from './config';
 
@@ -42,7 +43,7 @@ export function DateForm({ place, onClose, onSave }: DateFormProps) {
     ratings: { dennisRating: place?.dennisRating, nadineRating: place?.nadineRating, sharedRating: place?.sharedRating } as Ratings,
   }));
 
-  const errors = { name: requiredError(draft.name, 'Der Name'), mapsUrl: urlError(draft.mapsUrl), photoUrl: urlError(draft.photoUrl) };
+  const errors = { name: requiredError(draft.name, 'Der Name'), mapsUrl: urlError(draft.mapsUrl), photoUrl: imageError(draft.photoUrl) };
   const mapsHint =
     draft.mapsUrl && !errors.mapsUrl && !isGoogleMapsUrl(draft.mapsUrl)
       ? 'Das sieht nicht nach Google Maps aus – der Link funktioniert trotzdem.'
@@ -98,14 +99,13 @@ export function DateForm({ place, onClose, onSave }: DateFormProps) {
         <TextField label="Datum" type="date" value={draft.date} onChange={(v) => set('date', v)} />
         <SelectField label="Preisbereich" value={draft.priceRange} options={PRICE_OPTIONS} onChange={(v) => set('priceRange', v)} />
       </FormGrid>
-      <TextField
-        label="Foto URL"
-        type="url"
-        inputMode="url"
-        placeholder="https://…"
+      <ImageField
+        label="Foto"
         value={draft.photoUrl}
         onChange={(v) => set('photoUrl', v)}
         error={submitted ? errors.photoUrl : undefined}
+        fallbackEmoji={DATE_CATEGORY_META[draft.category].emoji}
+        search={{ domain: 'place', query: [draft.name, draft.city].filter(Boolean).join(' ') }}
       />
       <RatingsEditor value={draft.ratings} onChange={(ratings) => setDraft((d) => ({ ...d, ratings }))} />
       <TextAreaField label="Notizen" value={draft.notes} onChange={(v) => set('notes', v)} placeholder="Was wir bestellt haben, was wir nächstes Mal machen …" />

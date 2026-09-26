@@ -196,4 +196,8 @@ export interface Settings {
   theme: ThemePreference;
   /** Set once the initial seed has been written. */
   seededAt?: string;
+  /** Suggest matching online images while typing (default: on). */
+  autoImageSuggestions?: boolean;
+  /** Last used Bundesland for "Neu entdecken" (ISO 3166-2, e.g. DE-NW). */
+  discoverRegion?: string;
 }
