@@ -80,6 +80,10 @@ Details:
 - **Zum Speichern** braucht ein Gerät einmalig einen GitHub-Schlüssel (Fine-grained Token, nur dieses Repository, *Contents: Read and write*). Die App führt Schritt für Schritt dorthin. Geräte, die nur laden, brauchen keinen.
 - Große eigene Fotos machen die Datei groß; Bild-Links sind sparsamer.
 
+## Hosting auf Vercel (eigene Domain)
+
+Die Seite läuft zusätzlich über Vercel (z. B. mit eigener Domain). `vercel.json` sorgt dafür, dass Direktlinks wie `/anime` funktionieren, `index.html` nie veraltet aus dem Cache kommt und Speichervorgänge (Branch `sync-data`) keine Vercel-Builds auslösen. Das Speicher-Repository ist im Code festgelegt (`src/features/sync/github.ts`), gilt also für jede Domain.
+
 ## Datenhaltung
 
 Alle Daten liegen **ausschließlich im Browser** in IndexedDB (Datenbank `dennis-nadine`), niemals auf einem Server.
