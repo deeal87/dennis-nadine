@@ -11,7 +11,7 @@ jobs:
           for js in $(grep -o 'assets/[^"]*\.js' index.html); do curl -s "https://deeal87.github.io/dennis-nadine/$js" -o "$(basename $js)"; done
           echo "--- settings chunk:"; grep -o 'assets/SettingsPage-[A-Za-z0-9_-]*\.js' *.js | head -3
           S=$(grep -oh 'SettingsPage-[A-Za-z0-9_-]*\.js' *.js | head -1); echo "$S"; curl -s "https://deeal87.github.io/dennis-nadine/assets/$S" -o settings.js
-          for f in *.js; do grep -l "Speichern & auf allen" "$f"; done
-          grep -oh 'deeal87/dennis-nadine' *.js | sort | uniq -c
+          grep -l "Speichern & auf allen" *.js || echo "SECTION TEXT NOT FOUND"
+          (grep -oh "deeal87/dennis-nadine" *.js || echo "REPO NOT FOUND") | sort | uniq -c
           grep -oh '"sync-data"' *.js | sort | uniq -c
-          grep -oh 'VITE_SYNC_REPO[^,;]*' *.js | head
+          (grep -oh "VITE_SYNC_REPO[^,;]*" *.js || true) | head
