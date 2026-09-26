@@ -108,8 +108,8 @@ describe('automatic loading', () => {
 
   it('applyRemote keeps this device’s password and key', async () => {
     const { file, key } = await remoteWith(async () => undefined, 7);
-    await settingsRepository.update({ accessHash: 'a'.repeat(64), accessSalt: 'b'.repeat(32), syncKey: key, syncSalt: 'remote-salt' });
+    await settingsRepository.update({ githubToken: 'github_pat_x', syncKey: key, syncSalt: 'remote-salt' });
     await applyRemote(file, await decryptState(file, key));
-    expect(await settingsRepository.get()).toMatchObject({ accessHash: 'a'.repeat(64), syncSalt: 'remote-salt', syncVersion: 7 });
+    expect(await settingsRepository.get()).toMatchObject({ githubToken: 'github_pat_x', syncSalt: 'remote-salt', syncVersion: 7 });
   });
 });

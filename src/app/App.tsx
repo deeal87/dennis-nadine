@@ -7,36 +7,34 @@ import { EasterEggProvider } from '@/components/animations/EasterEggs';
 import { useApplyTheme } from '@/hooks/useTheme';
 import { AppRoutes } from './routes';
 import { StartupScreen } from './StartupScreen';
-import { LockScreen, type LockMode } from '@/features/lock/LockScreen';
+import { LockScreen } from '@/features/lock/LockScreen';
 import { SyncManager } from '@/features/sync/SyncManager';
 import { adoptPassword, readRemote, type RemoteSnapshot } from '@/features/sync/sync';
 import { hasAccess } from '@/features/lock/access';
 import { settingsRepository } from '@/data/repositories';
-import type { Settings } from '@/types/models';
 
 /** Router basename follows Vite's base (e.g. "/Steam-game1/" on GitHub Pages). */
 const basename = import.meta.env.BASE_URL.replace(/\/$/, '') || '/';
 
 type Boot =
   | { state: 'loading' }
-  | { state: 'locked'; mode: LockMode; settings: Settings; remote: RemoteSnapshot }
+  | { state: 'locked'; notice?: string; remote: RemoteSnapshot }
   | { state: 'ready'; remote: RemoteSnapshot }
   | { state: 'failed'; message: string };
 
 /**
- * Boot: open the database, look for a saved state on GitHub, then decide:
- * - known device with valid session → app
- * - a saved state exists → password opens it (also on brand-new devices)
- * - otherwise → local password (set it on first visit)
+ * Boot: open the database and look for a saved state on GitHub. Without a
+ * valid session the password is asked – also when the saved state was
+ * encrypted with a key this device doesn't have yet (it's derived from the
+ * password, so entering it once is enough).
  */
 async function boot(): Promise<Boot> {
   await ensureSeeded();
   const settings = await settingsRepository.get();
   const remote = await readRemote(settings.githubToken);
-  const passwordChanged = !!remote.file && !!settings.syncSalt && settings.syncSalt !== remote.file.kdf.salt;
-  if (hasAccess(settings) && !passwordChanged) return { state: 'ready', remote };
-  const mode: LockMode = remote.file ? (passwordChanged ? 'changed' : 'remote') : settings.accessHash ? 'unlock' : 'setup';
-  return { state: 'locked', mode, settings, remote };
+  const needsKey = !!remote.file && settings.syncSalt !== remote.file.kdf.salt;
+  if (hasAccess() && !needsKey) return { state: 'ready', remote };
+  return { state: 'locked', remote, notice: hasAccess() ? 'Einmal kurz das Passwort, um euren gespeicherten Stand zu öffnen.' : undefined };
 }
 
 export function App() {
@@ -50,9 +48,7 @@ export function App() {
   if (state.state === 'locked') {
     return (
       <LockScreen
-        mode={state.mode}
-        settings={state.settings}
-        remote={state.remote.file}
+        notice={state.notice}
         onUnlock={async (password) => {
           await adoptPassword(password, state.remote.file);
           setState({ state: 'ready', remote: state.remote });

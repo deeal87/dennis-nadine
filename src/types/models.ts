@@ -200,9 +200,6 @@ export interface Settings {
   autoImageSuggestions?: boolean;
   /** Last used Bundesland for "Neu entdecken" (ISO 3166-2, e.g. DE-NW). */
   discoverRegion?: string;
-  /** Device password: PBKDF2 hash + random salt (hex). Never exported. */
-  accessHash?: string;
-  accessSalt?: string;
   /** Sync (device-only, never exported): AES key from the shared password, its salt, last synced version. */
   syncKey?: CryptoKey;
   syncSalt?: string;

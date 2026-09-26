@@ -9,7 +9,7 @@ import { SEED_ANIME, SEED_TIMELINE } from '@/data/seed/initialData';
 import type { Settings } from '@/types/models';
 import { decryptState, deriveSyncKey, encryptState, randomHex, unlockSyncFile, type SyncFile } from './crypto';
 import { fetchSyncFile, SYNC_ENABLED, SyncError, uploadSyncFile } from './github';
-import { clearDirty, isDirty, markDirty, setRemoteState, withoutDirtyTracking } from './state';
+import { clearDirty, isDirty, setRemoteState, withoutDirtyTracking } from './state';
 
 export interface RemoteSnapshot {
   file: SyncFile | null;
@@ -71,15 +71,12 @@ export async function adoptPassword(password: string, remote: SyncFile | null): 
     }
   }
   const settings = await settingsRepository.get();
-  if (!settings.syncKey) await rekey(password, false);
+  if (!settings.syncKey) {
+    // Nothing saved yet: a fresh salt for the first save from this device.
+    const salt = randomHex();
+    await settingsRepository.update({ syncKey: await deriveSyncKey(password, salt), syncSalt: salt });
+  }
   return { opened: null };
-}
-
-/** New salt + key (e.g. after a password change). The next save re-encrypts everything. */
-export async function rekey(password: string, flagChanges = true): Promise<void> {
-  const salt = randomHex();
-  await settingsRepository.update({ syncKey: await deriveSyncKey(password, salt), syncSalt: salt });
-  if (flagChanges) markDirty();
 }
 
 /** Compares with GitHub and loads a newer state automatically when that is safe. */

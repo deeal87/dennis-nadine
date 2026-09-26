@@ -56,7 +56,7 @@ export function backupFileName(now = new Date()): string {
 }
 
 /** Password, sync key, token etc. belong to the device, not to the data – never exported or imported. */
-const DEVICE_FIELDS = ['accessHash', 'accessSalt', 'syncKey', 'syncSalt', 'syncVersion', 'syncSavedAt', 'githubToken'] as const;
+const DEVICE_FIELDS = ['syncKey', 'syncSalt', 'syncVersion', 'syncSavedAt', 'githubToken'] as const;
 
 function withoutAccess(settings: Settings): Settings {
   const copy = { ...settings };

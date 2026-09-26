@@ -1,89 +1,29 @@
-import { useState, type FormEvent } from 'react';
 import { LockKeyhole } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { TextField } from '@/components/ui/form';
-import { useToast } from '@/components/ui/Toast';
-import { useSettings } from '@/hooks/useStore';
-import { lock, passwordError, setPassword, verifyPassword } from '../lock/access';
-import { rekey } from '../sync/sync';
+import { lock } from '../lock/access';
 
-/** Lock the app on this device or change the device password. */
+/** Lock the app on this device (the password itself is fixed for the whole site). */
 export function PasswordSection() {
-  const settings = useSettings();
-  const toast = useToast();
-  const [open, setOpen] = useState(false);
-  const [current, setCurrent] = useState('');
-  const [next, setNext] = useState('');
-  const [repeat, setRepeat] = useState('');
-  const [error, setError] = useState<string>();
-  const [busy, setBusy] = useState(false);
-
-  const change = async (event: FormEvent) => {
-    event.preventDefault();
-    const problem = passwordError(next, repeat);
-    if (problem) return setError(problem);
-    setBusy(true);
-    if (!(await verifyPassword(current, settings))) {
-      setBusy(false);
-      return setError('Das aktuelle Passwort stimmt nicht.');
-    }
-    await setPassword(next);
-    await rekey(next);
-    setBusy(false);
-    setOpen(false);
-    setCurrent('');
-    setNext('');
-    setRepeat('');
-    setError(undefined);
-    toast({ message: 'Neues Passwort gesetzt 🔒 – jetzt einmal speichern, dann gilt es auf allen Geräten.' });
-  };
-
   return (
     <section className="card flex flex-col gap-3 p-5 sm:p-6 lg:col-span-2" aria-labelledby="password-title">
       <h2 id="password-title" className="text-xl font-semibold">
-        🔒 Passwort
+        🔒 Zugang
       </h2>
       <p className="text-sm text-muted">
-        Euer Passwort öffnet die App und verschlüsselt den gespeicherten Stand. Neue Geräte kommen nur mit diesem Passwort hinein. Es wird nur als
-        Prüfsumme gespeichert – nie im Klartext, nie in Backups.
+        Die Seite ist mit eurem festen Passwort geschützt – ohne kommt niemand hinein. Es steckt nur als Prüfsumme im Code, nie im Klartext.
+        Hier könnt ihr euch auf diesem Gerät wieder abmelden.
       </p>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          variant="secondary"
-          icon={LockKeyhole}
-          onClick={() => {
-            lock();
-            window.location.reload();
-          }}
-        >
-          Jetzt sperren
-        </Button>
-        {!open && (
-          <Button variant="soft" onClick={() => setOpen(true)}>
-            Passwort ändern
-          </Button>
-        )}
-      </div>
-      {open && (
-        <form onSubmit={change} className="grid gap-3 rounded-3xl bg-surface-2/60 p-4 sm:grid-cols-3" noValidate>
-          <TextField label="Aktuelles Passwort" type="password" autoComplete="current-password" value={current} onChange={setCurrent} />
-          <TextField label="Neues Passwort" type="password" autoComplete="new-password" value={next} onChange={setNext} />
-          <TextField label="Neues Passwort wiederholen" type="password" autoComplete="new-password" value={repeat} onChange={setRepeat} />
-          {error && (
-            <p role="alert" className="text-sm font-bold text-danger sm:col-span-3">
-              {error}
-            </p>
-          )}
-          <div className="flex gap-2 sm:col-span-3">
-            <Button type="submit" disabled={busy}>
-              Speichern
-            </Button>
-            <Button variant="ghost" onClick={() => setOpen(false)}>
-              Abbrechen
-            </Button>
-          </div>
-        </form>
-      )}
+      <Button
+        variant="secondary"
+        icon={LockKeyhole}
+        className="self-start"
+        onClick={() => {
+          lock();
+          window.location.reload();
+        }}
+      >
+        Jetzt sperren
+      </Button>
     </section>
   );
 }

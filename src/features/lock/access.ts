@@ -1,22 +1,21 @@
 /**
- * Device password for the app. There is no server, so the password is set on
- * the website itself and lives in this browser: a slow PBKDF2 hash with a
- * random salt is stored in the settings; unlocking keeps that hash as a token
- * (for the session, or permanently on this device). Changing the password
- * invalidates the token everywhere on this device.
+ * Site password. There is one fixed password for everybody; the code only
+ * contains a slow PBKDF2 hash of it, never the password itself. Unlocking
+ * stores that hash as a token (for the session, or permanently on this
+ * device). To change the password, replace SITE_PASSWORD_HASH with the output
+ * of: node -e "console.log(require('crypto').pbkdf2Sync(process.argv[1], 'dennis-nadine|site-password', 210000, 32, 'sha256').toString('hex'))" NEW_PASSWORD
  */
-import { settingsRepository } from '@/data/repositories';
-import type { Settings } from '@/types/models';
 
+export const PASSWORD_SALT = 'dennis-nadine|site-password';
 export const PBKDF2_ITERATIONS = 210_000;
-export const MIN_PASSWORD_LENGTH = 4;
+export const SITE_PASSWORD_HASH = 'd99b435677c259bc9f5d5476100be9fc5ae0dc72db2abc0393e4ee39257b7639';
 const TOKEN_KEY = 'dn-access';
 
-function toHex(bytes: ArrayBuffer | Uint8Array): string {
+function toHex(bytes: ArrayBuffer): string {
   return [...new Uint8Array(bytes)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-export async function derivePasswordHash(password: string, salt: string, iterations = PBKDF2_ITERATIONS): Promise<string> {
+export async function derivePasswordHash(password: string, salt = PASSWORD_SALT, iterations = PBKDF2_ITERATIONS): Promise<string> {
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey('raw', encoder.encode(password.trim()), 'PBKDF2', false, ['deriveBits']);
   const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: encoder.encode(salt), iterations }, key, 256);
@@ -31,10 +30,8 @@ export function safeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-export function passwordError(password: string, repeat: string): string | undefined {
-  if (password.trim().length < MIN_PASSWORD_LENGTH) return `Mindestens ${MIN_PASSWORD_LENGTH} Zeichen, bitte.`;
-  if (password.trim() !== repeat.trim()) return 'Die beiden Passwörter sind nicht gleich.';
-  return undefined;
+export async function verifyPassword(password: string): Promise<boolean> {
+  return safeEqual(await derivePasswordHash(password), SITE_PASSWORD_HASH);
 }
 
 function storages(): Storage[] {
@@ -49,43 +46,24 @@ function storages(): Storage[] {
   return list;
 }
 
-export function hasAccess(settings: Pick<Settings, 'accessHash'>): boolean {
-  const hash = settings.accessHash;
-  if (!hash) return false;
+export function hasAccess(): boolean {
   return storages().some((storage) => {
     const token = storage.getItem(TOKEN_KEY);
-    return token !== null && safeEqual(token, hash);
+    return token !== null && safeEqual(token, SITE_PASSWORD_HASH);
   });
-}
-
-function remember(hash: string, permanently: boolean): void {
-  lock();
-  try {
-    (permanently ? localStorage : sessionStorage).setItem(TOKEN_KEY, hash);
-  } catch {
-    // Without storage access holds only until the page is reloaded.
-  }
 }
 
 export function lock(): void {
   for (const storage of storages()) storage.removeItem(TOKEN_KEY);
 }
 
-/** Sets (or replaces) the device password and unlocks. */
-export async function setPassword(password: string, permanently = true): Promise<void> {
-  const salt = toHex(crypto.getRandomValues(new Uint8Array(16)));
-  const hash = await derivePasswordHash(password, salt);
-  await settingsRepository.update({ accessHash: hash, accessSalt: salt });
-  remember(hash, permanently);
-}
-
-export async function verifyPassword(password: string, settings: Pick<Settings, 'accessHash' | 'accessSalt'>): Promise<boolean> {
-  if (!settings.accessHash || !settings.accessSalt) return false;
-  return safeEqual(await derivePasswordHash(password, settings.accessSalt), settings.accessHash);
-}
-
-export async function unlock(password: string, settings: Pick<Settings, 'accessHash' | 'accessSalt'>, permanently: boolean): Promise<boolean> {
-  if (!(await verifyPassword(password, settings))) return false;
-  remember(settings.accessHash!, permanently);
+export async function unlock(password: string, permanently: boolean): Promise<boolean> {
+  if (!(await verifyPassword(password))) return false;
+  lock();
+  try {
+    (permanently ? localStorage : sessionStorage).setItem(TOKEN_KEY, SITE_PASSWORD_HASH);
+  } catch {
+    // Without storage, access holds until the page is reloaded.
+  }
   return true;
 }

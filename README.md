@@ -70,7 +70,7 @@ Details:
 
 ## Passwort & Speichern auf allen Geräten
 
-**Passwort:** Beim allerersten Öffnen legt ihr auf der Website ein Passwort fest. Es öffnet die App und verschlüsselt euren gespeicherten Stand. „Angemeldet bleiben“ merkt es sich pro Gerät; in den Einstellungen: *Jetzt sperren* und *Passwort ändern*. Gespeichert wird nur ein PBKDF2-Hash, nie das Passwort.
+**Passwort:** Die Seite hat ein festes Passwort – ohne kommt niemand hinein. Im Code steht nur ein PBKDF2-Hash davon (`SITE_PASSWORD_HASH` in `src/features/lock/access.ts`, dort steht auch der Befehl, um es zu ändern). Dasselbe Passwort verschlüsselt euren gespeicherten Stand. „Angemeldet bleiben“ merkt sich den Zugang pro Gerät; *Jetzt sperren* in den Einstellungen meldet ab.
 
 **Speichern (Einstellungen → ☁️):**
 - Jede Änderung setzt einen **roten Punkt** an „Einstellungen“, bis ihr auf *Jetzt speichern* tippt.
@@ -78,7 +78,6 @@ Details:
 - Jedes Gerät lädt beim Öffnen (und wenn die App wieder in den Vordergrund kommt) automatisch den neuesten Stand. Hat ein Gerät selbst ungespeicherte Änderungen, wird nichts überschrieben – die Einstellungen zeigen dann die Wahl „meinen Stand speichern“ oder „Stand vom anderen Gerät laden“.
 - **Neues Gerät:** Seite öffnen, Passwort eingeben → euer Stand ist da. Ohne Passwort kommt niemand hinein.
 - **Zum Speichern** braucht ein Gerät einmalig einen GitHub-Schlüssel (Fine-grained Token, nur dieses Repository, *Contents: Read and write*). Die App führt Schritt für Schritt dorthin. Geräte, die nur laden, brauchen keinen.
-- Passwort geändert? Einmal speichern – andere Geräte fragen dann einmal nach dem neuen Passwort.
 - Große eigene Fotos machen die Datei groß; Bild-Links sind sparsamer.
 
 ## Datenhaltung

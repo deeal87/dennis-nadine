@@ -123,7 +123,7 @@ export function SyncSection() {
   /** Password → sync key for this device (opens the saved state if there is one). */
   const connectPassword = async (password: string): Promise<string | null> => {
     const file = await fetchSyncFile(settings.githubToken).catch(() => null);
-    if (!file && settings.accessHash && !(await verifyPassword(password, settings))) return 'Das Passwort stimmt nicht.';
+    if (!(await verifyPassword(password))) return 'Das Passwort stimmt nicht.';
     const { opened } = await adoptPassword(password, file);
     if (file && !opened) return 'Mit diesem Passwort lässt sich der gespeicherte Stand nicht öffnen.';
     setNeedsPassword(false);
