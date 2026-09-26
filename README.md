@@ -68,13 +68,18 @@ Details:
 - SPA-Routing: Beim Build wird `index.html` nach `404.html` kopiert, damit Deep Links wie `/anime` funktionieren.
 - Lokal einen Pages-Build testen: `BASE_PATH=/dennis-nadine/ npm run build && BASE_PATH=/dennis-nadine/ npm run preview`.
 
-## Passwortschutz
+## Passwort & Speichern auf allen Geräten
 
-Beim ersten Öffnen auf einem Gerät legt ihr direkt auf der Website ein Passwort fest; danach fragt die App bei jedem Besuch danach („Angemeldet bleiben“ merkt es sich auf dem Gerät). In den Einstellungen: **Jetzt sperren** und **Passwort ändern**.
+**Passwort:** Beim allerersten Öffnen legt ihr auf der Website ein Passwort fest. Es öffnet die App und verschlüsselt euren gespeicherten Stand. „Angemeldet bleiben“ merkt es sich pro Gerät; in den Einstellungen: *Jetzt sperren* und *Passwort ändern*. Gespeichert wird nur ein PBKDF2-Hash, nie das Passwort.
 
-- Es gibt keinen Server – das Passwort gilt daher pro Browser/Gerät. Gespeichert wird nur ein PBKDF2-Hash (210 000 Runden, zufälliger Salt), nie das Passwort selbst. Backups enthalten es nicht.
-- Passwort vergessen: Nach zwei Fehlversuchen gibt es „Passwort vergessen?“ – das löscht die lokalen Daten dieses Geräts (danach Backup importieren).
-- Ein fremder Besucher sieht eure Einträge ohnehin nie: Die Daten liegen nur in euren Browsern.
+**Speichern (Einstellungen → ☁️):**
+- Jede Änderung setzt einen **roten Punkt** an „Einstellungen“, bis ihr auf *Jetzt speichern* tippt.
+- Der komplette Stand wird mit AES-256-GCM verschlüsselt (Schlüssel aus eurem Passwort, PBKDF2 310 000 Runden) und als `dennis-nadine.sync.json` auf dem Branch `sync-data` dieses Repositories abgelegt. Das Repo ist öffentlich – dort liegt aber nur unlesbarer Datensalat.
+- Jedes Gerät lädt beim Öffnen (und wenn die App wieder in den Vordergrund kommt) automatisch den neuesten Stand. Hat ein Gerät selbst ungespeicherte Änderungen, wird nichts überschrieben – die Einstellungen zeigen dann die Wahl „meinen Stand speichern“ oder „Stand vom anderen Gerät laden“.
+- **Neues Gerät:** Seite öffnen, Passwort eingeben → euer Stand ist da. Ohne Passwort kommt niemand hinein.
+- **Zum Speichern** braucht ein Gerät einmalig einen GitHub-Schlüssel (Fine-grained Token, nur dieses Repository, *Contents: Read and write*). Die App führt Schritt für Schritt dorthin. Geräte, die nur laden, brauchen keinen.
+- Passwort geändert? Einmal speichern – andere Geräte fragen dann einmal nach dem neuen Passwort.
+- Große eigene Fotos machen die Datei groß; Bild-Links sind sparsamer.
 
 ## Datenhaltung
 

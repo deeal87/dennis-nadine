@@ -11,6 +11,7 @@ import { ThemeSwitcher } from '@/components/layout/ThemeSwitcher';
 import { BackupSection } from './BackupSection';
 import { STORE_LABELS } from './storeLabels';
 import { PasswordSection } from './PasswordSection';
+import { SyncSection } from './SyncSection';
 
 function useStorageStatus() {
   const [persisted, setPersisted] = useState<boolean | null>(null);
@@ -45,6 +46,8 @@ export default function SettingsPage() {
     <>
       <PageHeader emoji="⚙️" title="Einstellungen" subtitle="Aussehen, Backups und alles rund um eure Daten." />
       <div className="grid gap-6 lg:grid-cols-2">
+        <SyncSection />
+
         <section className="card flex flex-col gap-3 p-5 sm:p-6" aria-labelledby="theme-title">
           <h2 id="theme-title" className="text-xl font-semibold">
             🌗 Farbschema
@@ -58,7 +61,8 @@ export default function SettingsPage() {
             <ShieldCheck className="size-5 text-mint" aria-hidden /> Datenschutz
           </h2>
           <p className="text-sm text-muted">
-            Keine Accounts, kein Tracking, keine Analytics. Alles bleibt lokal in eurem Browser (IndexedDB) – auch hochgeladene Fotos. Für
+            Keine Accounts, kein Tracking, keine Analytics. Alles liegt in eurem Browser (IndexedDB) – auch hochgeladene Fotos. „Speichern“
+            legt euren Stand nur verschlüsselt auf GitHub ab; ohne euer Passwort ist er unlesbar. Für
             Bildvorschläge und „Neu entdecken“ werden nur Suchbegriffe (Titel, Ort, Bundesland) an öffentliche Dienste wie MyAnimeList,
             Wikipedia oder OpenStreetMap geschickt. Karten und Videos laden erst, wenn ihr sie öffnet.
           </p>

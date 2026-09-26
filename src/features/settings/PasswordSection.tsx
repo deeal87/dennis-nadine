@@ -5,6 +5,7 @@ import { TextField } from '@/components/ui/form';
 import { useToast } from '@/components/ui/Toast';
 import { useSettings } from '@/hooks/useStore';
 import { lock, passwordError, setPassword, verifyPassword } from '../lock/access';
+import { rekey } from '../sync/sync';
 
 /** Lock the app on this device or change the device password. */
 export function PasswordSection() {
@@ -27,13 +28,14 @@ export function PasswordSection() {
       return setError('Das aktuelle Passwort stimmt nicht.');
     }
     await setPassword(next);
+    await rekey(next);
     setBusy(false);
     setOpen(false);
     setCurrent('');
     setNext('');
     setRepeat('');
     setError(undefined);
-    toast({ message: 'Neues Passwort gespeichert 🔒' });
+    toast({ message: 'Neues Passwort gesetzt 🔒 – jetzt einmal speichern, dann gilt es auf allen Geräten.' });
   };
 
   return (
@@ -42,8 +44,8 @@ export function PasswordSection() {
         🔒 Passwort
       </h2>
       <p className="text-sm text-muted">
-        Das Passwort gilt für diesen Browser auf diesem Gerät – jedes Gerät bekommt beim ersten Öffnen sein eigenes. Es wird nur als
-        verschlüsselte Prüfsumme gespeichert und nie in Backups übernommen.
+        Euer Passwort öffnet die App und verschlüsselt den gespeicherten Stand. Neue Geräte kommen nur mit diesem Passwort hinein. Es wird nur als
+        Prüfsumme gespeichert – nie im Klartext, nie in Backups.
       </p>
       <div className="flex flex-wrap gap-2">
         <Button

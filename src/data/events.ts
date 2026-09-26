@@ -3,6 +3,7 @@
  * both within this tab and (via BroadcastChannel) in other open tabs.
  */
 import type { StoreName } from './database';
+import { markDirty } from '@/features/sync/state';
 
 type Listener = () => void;
 
@@ -16,6 +17,8 @@ function emit(store: StoreName): void {
 channel?.addEventListener('message', (event: MessageEvent<StoreName>) => emit(event.data));
 
 export function notifyChange(store: StoreName): void {
+  // Settings are per device; everything else is shared state worth saving.
+  if (store !== 'settings') markDirty();
   emit(store);
   channel?.postMessage(store);
 }

@@ -1,6 +1,8 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Eye, EyeOff, LoaderCircle, LockKeyhole } from 'lucide-react';
 import type { Settings } from '@/types/models';
+import type { SyncFile } from '../sync/crypto';
+import { unlockSyncFile } from '../sync/crypto';
 import { FloatingParticles } from '@/components/animations/FloatingParticles';
 import { HeartShape } from '@/components/animations/Decor';
 import { Button } from '@/components/ui/Button';
@@ -12,11 +14,20 @@ import { passwordError, setPassword, unlock } from './access';
 /** Each wrong attempt adds a little waiting time. */
 const PENALTY_MS = 800;
 
+/**
+ * setup   – first visit, nothing saved yet: choose a password
+ * unlock  – password set on this device
+ * remote  – a saved state exists on GitHub: its password opens it (new devices too)
+ * changed – the password was changed on another device
+ */
+export type LockMode = 'setup' | 'unlock' | 'remote' | 'changed';
+
 interface LockScreenProps {
-  /** "setup" = first visit on this device, "unlock" = password is set. */
-  mode: 'setup' | 'unlock';
+  mode: LockMode;
   settings: Settings;
-  onUnlock: () => void;
+  remote: SyncFile | null;
+  /** Called with the verified password. */
+  onUnlock: (password: string) => Promise<void>;
 }
 
 function PasswordInput({ id, label, value, onChange, autoFocus, autoComplete }: { id: string; label: string; value: string; onChange: (v: string) => void; autoFocus?: boolean; autoComplete: string }) {
@@ -70,7 +81,7 @@ function Shell({ children, shake, onSubmit }: { children: ReactNode; shake: bool
   );
 }
 
-export function LockScreen({ mode, settings, onUnlock }: LockScreenProps) {
+export function LockScreen({ mode, settings, remote, onUnlock }: LockScreenProps) {
   const [password, setPasswordValue] = useState('');
   const [repeat, setRepeat] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
@@ -94,14 +105,25 @@ export function LockScreen({ mode, settings, onUnlock }: LockScreenProps) {
       if (problem) return fail(problem);
       setBusy(true);
       await setPassword(password, rememberMe);
-      setBusy(false);
-      return onUnlock();
+      await onUnlock(password);
+      return;
     }
     if (!password.trim()) return;
     setBusy(true);
-    const [ok] = await Promise.all([unlock(password, settings, rememberMe), new Promise((r) => setTimeout(r, failures * PENALTY_MS))]);
+    const check = async () => {
+      if (remote && (mode === 'remote' || mode === 'changed')) {
+        if (!(await unlockSyncFile(remote, password))) return false;
+        await setPassword(password, rememberMe);
+        return true;
+      }
+      return unlock(password, settings, rememberMe);
+    };
+    const [ok] = await Promise.all([check(), new Promise((r) => setTimeout(r, failures * PENALTY_MS))]);
+    if (ok) {
+      await onUnlock(password);
+      return;
+    }
     setBusy(false);
-    if (ok) return onUnlock();
     setFailures((f) => f + 1);
     setPasswordValue('');
     fail('Das war leider nicht richtig. 💔');
@@ -129,7 +151,13 @@ export function LockScreen({ mode, settings, onUnlock }: LockScreenProps) {
         </>
       ) : (
         <>
-          <p className="text-muted">Nur für Baby & Babe – bitte Passwort eingeben.</p>
+          <p className="text-muted">
+            {mode === 'remote'
+              ? 'Nur für Baby & Babe – mit eurem Passwort wird euer gespeicherter Stand geladen.'
+              : mode === 'changed'
+                ? 'Das Passwort wurde auf einem anderen Gerät geändert – bitte das neue eingeben.'
+                : 'Nur für Baby & Babe – bitte Passwort eingeben.'}
+          </p>
           <PasswordInput id="lock-password" label="Passwort" value={password} onChange={setPasswordValue} autoFocus autoComplete="current-password" />
           {rememberBox}
           <Button type="submit" size="lg" className="w-full" disabled={busy || !password.trim()}>

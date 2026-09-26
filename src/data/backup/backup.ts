@@ -55,10 +55,18 @@ export function backupFileName(now = new Date()): string {
   return `dennis-nadine-backup-${todayIso(now)}.json`;
 }
 
-/** The device password belongs to the device, not to the data – it is never exported or imported. */
+/** Password, sync key, token etc. belong to the device, not to the data – never exported or imported. */
+const DEVICE_FIELDS = ['accessHash', 'accessSalt', 'syncKey', 'syncSalt', 'syncVersion', 'syncSavedAt', 'githubToken'] as const;
+
 function withoutAccess(settings: Settings): Settings {
-  const { accessHash: _hash, accessSalt: _salt, ...rest } = settings;
-  return rest;
+  const copy = { ...settings };
+  for (const field of DEVICE_FIELDS) delete copy[field];
+  return copy;
+}
+
+function deviceFields(settings: Settings | undefined): Partial<Settings> {
+  if (!settings) return {};
+  return Object.fromEntries(DEVICE_FIELDS.filter((f) => settings[f] !== undefined).map((f) => [f, settings[f]]));
 }
 
 export async function exportBackup(): Promise<BackupFile> {
@@ -138,7 +146,7 @@ export async function importBackup(analysis: BackupAnalysis): Promise<void> {
   if (!analysis.valid) throw new Error('Ungültiges Backup kann nicht importiert werden.');
   const current = await getOne('settings', 'settings');
   const imported = analysis.data.settings[0];
-  const access = current?.accessHash ? { accessHash: current.accessHash, accessSalt: current.accessSalt } : {};
+  const access = deviceFields(current);
   const settings: Settings[] = imported || current ? [{ ...withoutAccess(imported ?? { id: 'settings', theme: 'system' }), ...access }] : [];
   await replaceAllStores({ ...analysis.data, settings });
 }

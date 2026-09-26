@@ -203,4 +203,11 @@ export interface Settings {
   /** Device password: PBKDF2 hash + random salt (hex). Never exported. */
   accessHash?: string;
   accessSalt?: string;
+  /** Sync (device-only, never exported): AES key from the shared password, its salt, last synced version. */
+  syncKey?: CryptoKey;
+  syncSalt?: string;
+  syncVersion?: number;
+  syncSavedAt?: string;
+  /** GitHub token for saving – only on devices that save. */
+  githubToken?: string;
 }

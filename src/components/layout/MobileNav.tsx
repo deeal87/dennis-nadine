@@ -6,7 +6,9 @@ import { IconButton } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { Logo } from './Logo';
 import { ThemeSwitcher } from './ThemeSwitcher';
-import { MOBILE_MORE, MOBILE_PRIMARY } from './navigation';
+import { MOBILE_MORE, MOBILE_PRIMARY, NAV_SETTINGS } from './navigation';
+import { AttentionDot, UNSAVED_LABEL } from './Sidebar';
+import { useSyncAttention } from '@/features/sync/useSync';
 
 export function MobileTopBar({ onSearch }: { onSearch: () => void }) {
   return (
@@ -25,6 +27,7 @@ const tabClass = (active: boolean) =>
 
 export function BottomNav() {
   const [moreOpen, setMoreOpen] = useState(false);
+  const attention = useSyncAttention();
   return (
     <>
       <nav
@@ -48,8 +51,9 @@ export function BottomNav() {
           ))}
           <li className="flex flex-1">
             <button type="button" className={tabClass(moreOpen)} onClick={() => setMoreOpen(true)} aria-haspopup="dialog">
-              <span className="grid h-7 w-12 place-items-center rounded-full">
+              <span className="relative grid h-7 w-12 place-items-center rounded-full">
                 <Ellipsis className="size-5" aria-hidden />
+                {attention && <AttentionDot label={UNSAVED_LABEL} className="absolute right-2 top-0" />}
               </span>
               Mehr
             </button>
@@ -70,10 +74,13 @@ export function BottomNav() {
                   )
                 }
               >
-                <span className="text-2xl" aria-hidden>
+                <span className="relative text-2xl" aria-hidden>
                   {item.emoji}
                 </span>
-                {item.label}
+                <span className="inline-flex items-center gap-1.5">
+                  {item.label}
+                  {attention && item.to === NAV_SETTINGS.to && <AttentionDot label={UNSAVED_LABEL} className="ml-0" />}
+                </span>
               </NavLink>
             </li>
           ))}

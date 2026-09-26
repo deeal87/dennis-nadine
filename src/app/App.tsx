@@ -7,7 +7,9 @@ import { EasterEggProvider } from '@/components/animations/EasterEggs';
 import { useApplyTheme } from '@/hooks/useTheme';
 import { AppRoutes } from './routes';
 import { StartupScreen } from './StartupScreen';
-import { LockScreen } from '@/features/lock/LockScreen';
+import { LockScreen, type LockMode } from '@/features/lock/LockScreen';
+import { SyncManager } from '@/features/sync/SyncManager';
+import { adoptPassword, readRemote, type RemoteSnapshot } from '@/features/sync/sync';
 import { hasAccess } from '@/features/lock/access';
 import { settingsRepository } from '@/data/repositories';
 import type { Settings } from '@/types/models';
@@ -17,34 +19,55 @@ const basename = import.meta.env.BASE_URL.replace(/\/$/, '') || '/';
 
 type Boot =
   | { state: 'loading' }
-  | { state: 'locked'; mode: 'setup' | 'unlock'; settings: Settings }
-  | { state: 'ready' }
+  | { state: 'locked'; mode: LockMode; settings: Settings; remote: RemoteSnapshot }
+  | { state: 'ready'; remote: RemoteSnapshot }
   | { state: 'failed'; message: string };
 
+/**
+ * Boot: open the database, look for a saved state on GitHub, then decide:
+ * - known device with valid session → app
+ * - a saved state exists → password opens it (also on brand-new devices)
+ * - otherwise → local password (set it on first visit)
+ */
+async function boot(): Promise<Boot> {
+  await ensureSeeded();
+  const settings = await settingsRepository.get();
+  const remote = await readRemote(settings.githubToken);
+  const passwordChanged = !!remote.file && !!settings.syncSalt && settings.syncSalt !== remote.file.kdf.salt;
+  if (hasAccess(settings) && !passwordChanged) return { state: 'ready', remote };
+  const mode: LockMode = remote.file ? (passwordChanged ? 'changed' : 'remote') : settings.accessHash ? 'unlock' : 'setup';
+  return { state: 'locked', mode, settings, remote };
+}
+
 export function App() {
-  const [boot, setBoot] = useState<Boot>({ state: 'loading' });
+  const [state, setState] = useState<Boot>({ state: 'loading' });
   useApplyTheme();
 
   useEffect(() => {
-    ensureSeeded()
-      .then(() => settingsRepository.get())
-      .then(
-        (settings) => {
-          if (hasAccess(settings)) setBoot({ state: 'ready' });
-          else setBoot({ state: 'locked', mode: settings.accessHash ? 'unlock' : 'setup', settings });
-        },
-        (error: unknown) => setBoot({ state: 'failed', message: error instanceof Error ? error.message : String(error) }),
-      );
+    boot().then(setState, (error: unknown) => setState({ state: 'failed', message: error instanceof Error ? error.message : String(error) }));
   }, []);
 
-  if (boot.state === 'locked') return <LockScreen mode={boot.mode} settings={boot.settings} onUnlock={() => setBoot({ state: 'ready' })} />;
-  if (boot.state !== 'ready') return <StartupScreen error={boot.state === 'failed' ? boot.message : undefined} />;
+  if (state.state === 'locked') {
+    return (
+      <LockScreen
+        mode={state.mode}
+        settings={state.settings}
+        remote={state.remote.file}
+        onUnlock={async (password) => {
+          await adoptPassword(password, state.remote.file);
+          setState({ state: 'ready', remote: state.remote });
+        }}
+      />
+    );
+  }
+  if (state.state !== 'ready') return <StartupScreen error={state.state === 'failed' ? state.message : undefined} />;
 
   return (
     <BrowserRouter basename={basename}>
       <ToastProvider>
         <ConfirmProvider>
           <EasterEggProvider>
+            <SyncManager initialRemote={state.remote} />
             <AppRoutes />
           </EasterEggProvider>
         </ConfirmProvider>
