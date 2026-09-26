@@ -6,10 +6,13 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { BottomNav, MobileTopBar } from './MobileNav';
 import { PageSkeleton } from './PageSkeleton';
 import { Sidebar } from './Sidebar';
+import { UnsavedPill } from '@/features/sync/UnsavedPill';
+import { useUpdateCheck } from '@/hooks/useUpdateCheck';
 
 export function AppShell() {
   const location = useLocation();
   const [searchOpen, setSearchOpen] = useState(false);
+  useUpdateCheck();
 
   // Ctrl/Cmd + K opens the global search from anywhere.
   useEffect(() => {
@@ -24,8 +27,8 @@ export function AppShell() {
   }, []);
 
   useEffect(() => {
-    window.scrollTo({ top: 0 });
-  }, [location.pathname]);
+    if (!location.hash) window.scrollTo({ top: 0 });
+  }, [location.pathname, location.hash]);
 
   return (
     <div className="flex min-h-dvh">
@@ -49,6 +52,7 @@ export function AppShell() {
           </ErrorBoundary>
         </main>
       </div>
+      <UnsavedPill />
       <BottomNav />
       <SearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} />
     </div>

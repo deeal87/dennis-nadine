@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useLocation } from 'react-router';
 import { CloudDownload, CloudUpload, ExternalLink, KeyRound, LoaderCircle } from 'lucide-react';
 import { Button, buttonClasses } from '@/components/ui/Button';
 import { inputClass } from '@/components/ui/form';
@@ -11,6 +12,7 @@ import { verifyPassword } from '../lock/access';
 import { fetchSyncFile, SYNC_BRANCH, SYNC_ENABLED, SYNC_REPO, verifyToken } from '../sync/github';
 import { adoptPassword, autoSync, loadRemoteNow, readRemote, saveNow, SyncConflictError } from '../sync/sync';
 import { useSync, useSyncAttention } from '../sync/useSync';
+import { SYNC_ANCHOR } from '../sync/UnsavedPill';
 
 const timeFormat = new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
 const when = (iso?: string) => (iso ? timeFormat.format(new Date(iso)) : '');
@@ -58,6 +60,13 @@ export function SyncSection() {
   const [token, setToken] = useState('');
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [needsPassword, setNeedsPassword] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
+  const { hash } = useLocation();
+
+  // Coming from the "Speichern" reminder: bring this section into view.
+  useEffect(() => {
+    if (hash === `#${SYNC_ANCHOR}`) sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [hash]);
 
   if (!SYNC_ENABLED) return null;
   const hasToken = !!settings.githubToken;
@@ -151,7 +160,12 @@ export function SyncSection() {
   })();
 
   return (
-    <section className={cn('card flex flex-col gap-4 p-5 sm:p-6 lg:col-span-2', attention && 'ring-2 ring-danger/40')} aria-labelledby="sync-title">
+    <section
+      ref={sectionRef}
+      id={SYNC_ANCHOR}
+      className={cn('card flex scroll-mt-24 flex-col gap-4 p-5 sm:p-6 lg:col-span-2', attention && 'ring-2 ring-danger/40')}
+      aria-labelledby="sync-title"
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 id="sync-title" className="flex items-center gap-2 text-xl font-semibold">
