@@ -6,7 +6,13 @@
  */
 import { isSyncFile, type SyncFile } from './crypto';
 
-export const SYNC_REPO: string = import.meta.env.VITE_SYNC_REPO ?? '';
+/**
+ * Repository that holds the encrypted shared state. Fixed here so every copy
+ * of the site (github.io, custom domain, other hosts) saves to the same place;
+ * VITE_SYNC_REPO can override it for forks.
+ */
+const DEFAULT_SYNC_REPO = 'deeal87/dennis-nadine';
+export const SYNC_REPO: string = import.meta.env.VITE_SYNC_REPO || DEFAULT_SYNC_REPO;
 export const SYNC_BRANCH = 'sync-data';
 export const SYNC_PATH = 'dennis-nadine.sync.json';
 export const SYNC_ENABLED = /^[\w.-]+\/[\w.-]+$/.test(SYNC_REPO);
