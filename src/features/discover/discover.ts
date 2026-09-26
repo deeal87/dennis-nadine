@@ -40,37 +40,32 @@ async function townsFor(regionCode: string, city: string | undefined, signal?: A
   return [found];
 }
 
-function dedupe(places: DiscoveredPlace[]): DiscoveredPlace[] {
-  const seen = new Set<string>();
-  return places.filter((p) => !seen.has(p.id) && seen.add(p.id));
-}
-
 /** Filters out known and already shown places (pure, exported for tests). */
 export function freshPlaces(places: readonly DiscoveredPlace[], knownNames: readonly string[], alreadyShown: ReadonlySet<string>): DiscoveredPlace[] {
   const known = new Set(knownNames.map(normalizeText));
   return places.filter((p) => !known.has(normalizeText(p.name)) && !alreadyShown.has(p.id));
 }
 
-/**
- * Collects candidates around a town. Returns null when every source failed
- * (as opposed to [] = sources answered, nothing there).
- */
-async function placesAround(type: DiscoverType, town: Town, random: RandomSource | undefined, signal?: AbortSignal): Promise<DiscoveredPlace[] | null> {
-  const key = `${type.id}|${town.lat},${town.lon}`;
+/** Nominatim results around a town (cached). null = the source did not answer. */
+async function nominatimAround(type: DiscoverType, town: Town, random: RandomSource | undefined, signal?: AbortSignal): Promise<DiscoveredPlace[] | null> {
+  const key = `nominatim|${type.id}|${town.lat},${town.lon}`;
   const cached = placeCache.get(key);
   if (cached) return cached;
-
   const term = pickRandom(type.searchTerms, random) ?? type.searchTerms[0]!;
-  let places = await searchPlaces(type, term, town, signal);
-  let answered = places.length > 0;
-  if (places.length < 5) {
-    const overpass = await runOverpass(buildPlacesQuery(type, town), signal);
-    if (overpass) {
-      answered = true;
-      places = dedupe([...places, ...parsePlaces(overpass, type.id, town.name)]);
-    }
-  }
-  if (!answered && places.length === 0) return null;
+  const places = await searchPlaces(type, term, town, signal);
+  if (places === null) return null;
+  placeCache.set(key, places);
+  return places;
+}
+
+/** Overpass is more complete but often overloaded – only asked when Nominatim has nothing new. */
+async function overpassAround(type: DiscoverType, town: Town, signal?: AbortSignal): Promise<DiscoveredPlace[] | null> {
+  const key = `overpass|${type.id}|${town.lat},${town.lon}`;
+  const cached = placeCache.get(key);
+  if (cached) return cached;
+  const json = await runOverpass(buildPlacesQuery(type, town), signal);
+  if (!json) return null;
+  const places = parsePlaces(json, type.id, town.name);
   placeCache.set(key, places);
   return places;
 }
@@ -82,13 +77,15 @@ export async function discoverPlace({ typeId, regionCode, city, knownNames, rand
   for (let attempt = 0; attempt < MAX_TOWN_ATTEMPTS && candidates.length > 0; attempt++) {
     const town = pickRandom(candidates, random)!;
     candidates.splice(candidates.indexOf(town), 1);
-    const places = await placesAround(type, town, random, signal);
-    if (places === null) continue;
-    anyAnswer = true;
-    const place = pickRandom(freshPlaces(places, knownNames, shown), random);
-    if (place) {
-      shown.add(place.id);
-      return place;
+    for (const source of [() => nominatimAround(type, town, random, signal), () => overpassAround(type, town, signal)]) {
+      const places = await source();
+      if (places === null) continue;
+      anyAnswer = true;
+      const place = pickRandom(freshPlaces(places, knownNames, shown), random);
+      if (place) {
+        shown.add(place.id);
+        return place;
+      }
     }
   }
   if (!anyAnswer) throw new DiscoverError('OpenStreetMap ist gerade nicht erreichbar. Bitte gleich nochmal versuchen.');

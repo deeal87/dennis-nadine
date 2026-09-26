@@ -111,9 +111,17 @@ export function jikanSearchUrl(query: string): string {
   return `https://api.jikan.moe/v4/anime?${params}`;
 }
 
+/** When MyAnimeList is down (Jikan answers 5xx), skip it for a while and ask AniList directly. */
+const JIKAN_PAUSE_MS = 5 * 60_000;
+let jikanPausedUntil = 0;
+
 export async function searchAnime(query: string, signal?: AbortSignal): Promise<ImageCandidate[]> {
-  const jikan = parseJikan(await getJson(jikanSearchUrl(query), signal));
-  if (jikan.length > 0) return jikan;
+  if (Date.now() >= jikanPausedUntil) {
+    const json = await getJson(jikanSearchUrl(query), signal);
+    if (json === null && !signal?.aborted) jikanPausedUntil = Date.now() + JIKAN_PAUSE_MS;
+    const jikan = parseJikan(json);
+    if (jikan.length > 0) return jikan;
+  }
   return parseAniList(
     await getJson('https://graphql.anilist.co', signal, {
       method: 'POST',

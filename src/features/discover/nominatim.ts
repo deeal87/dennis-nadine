@@ -103,6 +103,8 @@ export function parseNominatimPlaces(json: unknown, type: DiscoverType, fallback
   });
 }
 
-export async function searchPlaces(type: DiscoverType, term: string, town: Town, signal?: AbortSignal): Promise<DiscoveredPlace[]> {
-  return parseNominatimPlaces(await search(placeSearchParams(term, town), signal), type, town.name);
+/** Resolves to null when Nominatim did not answer. */
+export async function searchPlaces(type: DiscoverType, term: string, town: Town, signal?: AbortSignal): Promise<DiscoveredPlace[] | null> {
+  const json = await search(placeSearchParams(term, town), signal);
+  return json === null ? null : parseNominatimPlaces(json, type, town.name);
 }
