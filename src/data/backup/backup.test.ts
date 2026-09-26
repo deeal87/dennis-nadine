@@ -99,6 +99,15 @@ describe('export / import / reset with IndexedDB', () => {
     expect((await animeRepository.list()).map((a) => a.title)).toEqual(['Dragon Ball']);
   });
 
+  it('never exports or overwrites the device password', async () => {
+    await settingsRepository.update({ accessHash: 'a'.repeat(64), accessSalt: 'b'.repeat(32), theme: 'dark' });
+    const backup = await exportBackup();
+    expect(backup.data.settings[0]).not.toHaveProperty('accessHash');
+    const foreign = { id: 'settings', theme: 'light', accessHash: 'c'.repeat(64), accessSalt: 'd'.repeat(32) };
+    await importBackup(analyzeBackup(file({ settings: [foreign] })));
+    expect(await settingsRepository.get()).toMatchObject({ theme: 'light', accessHash: 'a'.repeat(64), accessSalt: 'b'.repeat(32) });
+  });
+
   it('refuses to import an invalid analysis', async () => {
     await expect(importBackup(analyzeBackup('{'))).rejects.toThrow();
   });

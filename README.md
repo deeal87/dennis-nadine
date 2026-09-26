@@ -70,18 +70,11 @@ Details:
 
 ## Passwortschutz
 
-Die Seite kann mit einem Passwort geschützt werden, bevor man sie betritt:
+Beim ersten Öffnen auf einem Gerät legt ihr direkt auf der Website ein Passwort fest; danach fragt die App bei jedem Besuch danach („Angemeldet bleiben“ merkt es sich auf dem Gerät). In den Einstellungen: **Jetzt sperren** und **Passwort ändern**.
 
-1. Repository → **Settings → Secrets and variables → Actions → New repository secret**
-   Name: `APP_PASSWORD`, Wert: euer Passwort.
-2. Optional unter **Variables** `APP_PASSWORD_HINT` anlegen (Tipp, der nach einem Fehlversuch erscheint).
-3. Workflow neu starten (Actions → „Build & Deploy“ → „Run workflow“) oder einfach pushen.
-
-Das Passwort selbst steht nirgends im Code: Beim Build wird daraus ein PBKDF2-Hash (210 000 Runden) erzeugt, nur der landet in der Seite. „Angemeldet bleiben“ merkt sich den Zugang auf dem Gerät; „Jetzt sperren“ in den Einstellungen meldet wieder ab. Ohne Secret gibt es keine Sperre.
-
-Hinweis: Das ist ein leichter Schutz gegen zufällige Besucher einer statischen Seite, kein Server-Login. Eure Einträge liegen ohnehin nur lokal in euren Browsern und sind über die Seite nie für andere sichtbar.
-
-Lokal testen: `APP_PASSWORD=geheim npm run dev`.
+- Es gibt keinen Server – das Passwort gilt daher pro Browser/Gerät. Gespeichert wird nur ein PBKDF2-Hash (210 000 Runden, zufälliger Salt), nie das Passwort selbst. Backups enthalten es nicht.
+- Passwort vergessen: Nach zwei Fehlversuchen gibt es „Passwort vergessen?“ – das löscht die lokalen Daten dieses Geräts (danach Backup importieren).
+- Ein fremder Besucher sieht eure Einträge ohnehin nie: Die Daten liegen nur in euren Browsern.
 
 ## Datenhaltung
 

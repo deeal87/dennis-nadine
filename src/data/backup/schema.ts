@@ -161,6 +161,8 @@ export const SCHEMAS: Record<StoreName, Schema> = {
     seededAt: { type: 'string', format: 'timestamp' },
     autoImageSuggestions: { type: 'boolean' },
     discoverRegion: { type: 'string', max: 10 },
+    accessHash: { type: 'string', max: 128 },
+    accessSalt: { type: 'string', max: 128 },
   },
 };
 

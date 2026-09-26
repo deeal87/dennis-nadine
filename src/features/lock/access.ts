@@ -1,26 +1,22 @@
 /**
- * Light-weight access gate for the public static site. The bundle only knows a
- * slow PBKDF2 hash of the password; unlocking stores that hash as a token
- * (per session, or permanently on this device). Changing the password
- * invalidates every stored token.
- *
- * This keeps casual visitors out – it is not server-side security. The data
- * itself never leaves the browser anyway.
+ * Device password for the app. There is no server, so the password is set on
+ * the website itself and lives in this browser: a slow PBKDF2 hash with a
+ * random salt is stored in the settings; unlocking keeps that hash as a token
+ * (for the session, or permanently on this device). Changing the password
+ * invalidates the token everywhere on this device.
  */
-import access from '../../../access.config.json';
+import { settingsRepository } from '@/data/repositories';
+import type { Settings } from '@/types/models';
 
-export const ACCESS_HASH: string = typeof __ACCESS_HASH__ === 'string' ? __ACCESS_HASH__ : '';
-export const ACCESS_HINT: string = typeof __ACCESS_HINT__ === 'string' ? __ACCESS_HINT__ : '';
-export const ACCESS_ENABLED = ACCESS_HASH.length > 0;
-
+export const PBKDF2_ITERATIONS = 210_000;
+export const MIN_PASSWORD_LENGTH = 4;
 const TOKEN_KEY = 'dn-access';
 
-function toHex(buffer: ArrayBuffer): string {
-  return [...new Uint8Array(buffer)].map((b) => b.toString(16).padStart(2, '0')).join('');
+function toHex(bytes: ArrayBuffer | Uint8Array): string {
+  return [...new Uint8Array(bytes)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-/** Same derivation as the build (vite.config.ts): PBKDF2-SHA256, 32 bytes, hex. */
-export async function derivePasswordHash(password: string, salt = access.salt, iterations = access.iterations): Promise<string> {
+export async function derivePasswordHash(password: string, salt: string, iterations = PBKDF2_ITERATIONS): Promise<string> {
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey('raw', encoder.encode(password.trim()), 'PBKDF2', false, ['deriveBits']);
   const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: encoder.encode(salt), iterations }, key, 256);
@@ -35,37 +31,61 @@ export function safeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-function read(storage: () => Storage): string | null {
-  try {
-    return storage().getItem(TOKEN_KEY);
-  } catch {
-    return null;
-  }
+export function passwordError(password: string, repeat: string): string | undefined {
+  if (password.trim().length < MIN_PASSWORD_LENGTH) return `Mindestens ${MIN_PASSWORD_LENGTH} Zeichen, bitte.`;
+  if (password.trim() !== repeat.trim()) return 'Die beiden Passwörter sind nicht gleich.';
+  return undefined;
 }
 
-export function hasAccess(): boolean {
-  if (!ACCESS_ENABLED) return true;
-  const token = read(() => localStorage) ?? read(() => sessionStorage);
-  return token !== null && safeEqual(token, ACCESS_HASH);
+function storages(): Storage[] {
+  const list: Storage[] = [];
+  for (const get of [() => localStorage, () => sessionStorage]) {
+    try {
+      list.push(get());
+    } catch {
+      // Storage blocked (private mode) – skip.
+    }
+  }
+  return list;
 }
 
-export async function unlock(password: string, remember: boolean): Promise<boolean> {
-  const hash = await derivePasswordHash(password);
-  if (!safeEqual(hash, ACCESS_HASH)) return false;
+export function hasAccess(settings: Pick<Settings, 'accessHash'>): boolean {
+  const hash = settings.accessHash;
+  if (!hash) return false;
+  return storages().some((storage) => {
+    const token = storage.getItem(TOKEN_KEY);
+    return token !== null && safeEqual(token, hash);
+  });
+}
+
+function remember(hash: string, permanently: boolean): void {
+  lock();
   try {
-    (remember ? localStorage : sessionStorage).setItem(TOKEN_KEY, hash);
+    (permanently ? localStorage : sessionStorage).setItem(TOKEN_KEY, hash);
   } catch {
-    // Storage blocked (private mode): access holds until the tab is closed.
+    // Without storage access holds only until the page is reloaded.
   }
-  return true;
 }
 
 export function lock(): void {
-  for (const storage of [() => localStorage, () => sessionStorage]) {
-    try {
-      storage().removeItem(TOKEN_KEY);
-    } catch {
-      // ignore
-    }
-  }
+  for (const storage of storages()) storage.removeItem(TOKEN_KEY);
+}
+
+/** Sets (or replaces) the device password and unlocks. */
+export async function setPassword(password: string, permanently = true): Promise<void> {
+  const salt = toHex(crypto.getRandomValues(new Uint8Array(16)));
+  const hash = await derivePasswordHash(password, salt);
+  await settingsRepository.update({ accessHash: hash, accessSalt: salt });
+  remember(hash, permanently);
+}
+
+export async function verifyPassword(password: string, settings: Pick<Settings, 'accessHash' | 'accessSalt'>): Promise<boolean> {
+  if (!settings.accessHash || !settings.accessSalt) return false;
+  return safeEqual(await derivePasswordHash(password, settings.accessSalt), settings.accessHash);
+}
+
+export async function unlock(password: string, settings: Pick<Settings, 'accessHash' | 'accessSalt'>, permanently: boolean): Promise<boolean> {
+  if (!(await verifyPassword(password, settings))) return false;
+  remember(settings.accessHash!, permanently);
+  return true;
 }

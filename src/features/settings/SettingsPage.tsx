@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { ThemeSwitcher } from '@/components/layout/ThemeSwitcher';
 import { BackupSection } from './BackupSection';
 import { STORE_LABELS } from './storeLabels';
-import { ACCESS_ENABLED, lock } from '../lock/access';
+import { PasswordSection } from './PasswordSection';
 
 function useStorageStatus() {
   const [persisted, setPersisted] = useState<boolean | null>(null);
@@ -92,24 +92,7 @@ export default function SettingsPage() {
           />
         </section>
 
-        {ACCESS_ENABLED && (
-          <section className="card flex flex-col gap-3 p-5 sm:p-6 lg:col-span-2" aria-labelledby="lock-title">
-            <h2 id="lock-title" className="text-xl font-semibold">
-              🔒 Zugang
-            </h2>
-            <p className="text-sm text-muted">Die Seite ist mit eurem Passwort geschützt. Hier könnt ihr sie auf diesem Gerät wieder sperren.</p>
-            <Button
-              variant="secondary"
-              className="self-start"
-              onClick={() => {
-                lock();
-                window.location.reload();
-              }}
-            >
-              Jetzt sperren
-            </Button>
-          </section>
-        )}
+        <PasswordSection />
 
         <div className="lg:col-span-2">
           <BackupSection />

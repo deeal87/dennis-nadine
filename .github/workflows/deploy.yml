@@ -34,10 +34,6 @@ jobs:
           # Project pages live under /<repo>/. Set the repository variable BASE_PATH
           # (e.g. "/") when using a custom domain or a user/organisation page.
           BASE_PATH: ${{ vars.BASE_PATH || format('/{0}/', github.event.repository.name) }}
-          # Optional password gate: set the repository secret APP_PASSWORD
-          # (and optionally the variable APP_PASSWORD_HINT). Only a hash ends up in the site.
-          APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
-          APP_PASSWORD_HINT: ${{ vars.APP_PASSWORD_HINT }}
 
       - name: Upload Pages artifact
         if: github.event_name != 'pull_request' && github.ref_name == github.event.repository.default_branch

@@ -8,7 +8,8 @@
  *   "data": { "anime": [...], "recipes": [...], ... }
  * }
  */
-import { readAllStores, replaceAllStores, STORE_NAMES, type DatabaseSnapshot, type StoreName } from '../database';
+import { getOne, readAllStores, replaceAllStores, STORE_NAMES, type DatabaseSnapshot, type StoreName } from '../database';
+import type { Settings } from '@/types/models';
 import { validateEntity } from './schema';
 import { todayIso } from '@/lib/date';
 
@@ -54,8 +55,15 @@ export function backupFileName(now = new Date()): string {
   return `dennis-nadine-backup-${todayIso(now)}.json`;
 }
 
+/** The device password belongs to the device, not to the data – it is never exported or imported. */
+function withoutAccess(settings: Settings): Settings {
+  const { accessHash: _hash, accessSalt: _salt, ...rest } = settings;
+  return rest;
+}
+
 export async function exportBackup(): Promise<BackupFile> {
-  return createBackup(await readAllStores());
+  const data = await readAllStores();
+  return createBackup({ ...data, settings: data.settings.map(withoutAccess) });
 }
 
 /**
@@ -128,7 +136,11 @@ export function analyzeBackup(json: string): BackupAnalysis {
 /** Replaces all local data with the validated content of an analysis. */
 export async function importBackup(analysis: BackupAnalysis): Promise<void> {
   if (!analysis.valid) throw new Error('Ungültiges Backup kann nicht importiert werden.');
-  await replaceAllStores(analysis.data);
+  const current = await getOne('settings', 'settings');
+  const imported = analysis.data.settings[0];
+  const access = current?.accessHash ? { accessHash: current.accessHash, accessSalt: current.accessSalt } : {};
+  const settings: Settings[] = imported || current ? [{ ...withoutAccess(imported ?? { id: 'settings', theme: 'system' }), ...access }] : [];
+  await replaceAllStores({ ...analysis.data, settings });
 }
 
 /** Deletes every local record. The seed is not re-applied (settings are cleared too, so it will be on next start). */
