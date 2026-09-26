@@ -1,9 +1,10 @@
 /**
- * OpenStreetMap lookups via the public Overpass API (no key, CORS enabled).
- * Query builders and parsers are pure so they can be tested offline.
+ * OpenStreetMap place lookups via Overpass (fallback source, more complete but
+ * often overloaded) plus the shared place model. Query builders and parsers
+ * are pure so they can be tested offline.
  */
 import { toSafeUrl } from '@/lib/url';
-import type { DiscoverType, Region } from './config';
+import type { DiscoverType } from './config';
 
 export interface Town {
   id: number;
@@ -27,27 +28,25 @@ export interface DiscoveredPlace {
   osmUrl: string;
 }
 
-const ENDPOINTS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+/** The public mirrors currently hang, so only the main server is used – with a timeout. */
+const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
+const OVERPASS_TIMEOUT_MS = 12_000;
 
 export class DiscoverError extends Error {}
-
-const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\"]/g, '\\$&');
-
-export function buildTownsQuery(region: Region, city?: string): string {
-  const kinds = city ? 'city|town|village|suburb' : region.cityState ? 'city|suburb|quarter' : 'city|town';
-  const name = city?.trim() ? `["name"~"^${escapeRegex(city.trim())}$",i]` : '["name"]';
-  return `[out:json][timeout:25];area["ISO3166-2"="${region.code}"]["admin_level"="4"]->.r;node["place"~"^(${kinds})$"]${name}(area.r);out 600;`;
-}
 
 /** Search radius around the town centre, in metres. */
 export function radiusFor(kind: string): number {
   return kind === 'city' ? 8000 : kind === 'town' ? 5000 : 3000;
 }
 
+function tagFilter(key: string, values: string[]): string {
+  return values.length === 1 ? `["${key}"="${values[0]}"]` : `["${key}"~"^(${values.join('|')})$"]`;
+}
+
 export function buildPlacesQuery(type: DiscoverType, town: Pick<Town, 'lat' | 'lon' | 'kind'>): string {
   const around = `(around:${radiusFor(town.kind)},${town.lat.toFixed(5)},${town.lon.toFixed(5)})`;
-  const parts = type.filters.map((filter) => `nwr${filter}["name"]${around};`).join('');
-  return `[out:json][timeout:25];(${parts});out center tags 300;`;
+  const parts = type.osm.map(({ key, values }) => `nwr${tagFilter(key, values)}["name"]${around};`).join('');
+  return `[out:json][timeout:20];(${parts});out center tags 300;`;
 }
 
 type Element = { type?: string; id?: number; lat?: number; lon?: number; center?: { lat?: number; lon?: number }; tags?: Record<string, string> };
@@ -57,19 +56,59 @@ function elements(json: unknown): Element[] {
   return Array.isArray(list) ? (list as Element[]) : [];
 }
 
-export function parseTowns(json: unknown): Town[] {
-  return elements(json).flatMap((e) =>
-    typeof e.id === 'number' && typeof e.lat === 'number' && typeof e.lon === 'number' && e.tags?.name
-      ? [{ id: e.id, name: e.tags.name, lat: e.lat, lon: e.lon, kind: e.tags.place ?? 'town' }]
-      : [],
-  );
+/** Links an external abort signal with a timeout. */
+export function timeoutSignal(ms: number, outer?: AbortSignal): { signal: AbortSignal; done: () => void } {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  const onAbort = () => controller.abort();
+  outer?.addEventListener('abort', onAbort);
+  return {
+    signal: controller.signal,
+    done: () => {
+      clearTimeout(timer);
+      outer?.removeEventListener('abort', onAbort);
+    },
+  };
 }
 
-function imageFromTags(tags: Record<string, string>): string | undefined {
+function imageFromTags(tags: Record<string, string | undefined>): string | undefined {
   const commons = tags.wikimedia_commons?.match(/^File:(.+)$/)?.[1];
   if (commons) return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(commons)}?width=1024`;
   const image = toSafeUrl(tags.image);
   return image && /\.(jpe?g|png|webp)(\?|$)/i.test(image) ? image : undefined;
+}
+
+export interface PlaceInput {
+  osmType: string;
+  osmId: number;
+  name: string;
+  lat: number;
+  lon: number;
+  street?: string;
+  houseNumber?: string;
+  postcode?: string;
+  city?: string;
+  /** Extra OSM tags: cuisine, website, image, wikimedia_commons … */
+  tags: Record<string, string | undefined>;
+}
+
+/** Shared place builder for Overpass and Nominatim results. */
+export function toDiscoveredPlace(input: PlaceInput, typeId: string): DiscoveredPlace {
+  const street = [input.street, input.houseNumber].filter(Boolean).join(' ');
+  const address = [street, [input.postcode, input.city].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+  return {
+    id: `osm-${input.osmType}-${input.osmId}`,
+    name: input.name,
+    typeId,
+    lat: input.lat,
+    lon: input.lon,
+    address: address || undefined,
+    city: input.city,
+    cuisine: input.tags.cuisine?.split(';').map((c) => c.replace(/_/g, ' ')).join(', '),
+    website: toSafeUrl(input.tags.website ?? input.tags['contact:website']),
+    imageUrl: imageFromTags(input.tags),
+    osmUrl: `https://www.openstreetmap.org/${input.osmType}/${input.osmId}`,
+  };
 }
 
 export function parsePlaces(json: unknown, typeId: string, fallbackCity?: string): DiscoveredPlace[] {
@@ -78,36 +117,36 @@ export function parsePlaces(json: unknown, typeId: string, fallbackCity?: string
     const lat = e.lat ?? e.center?.lat;
     const lon = e.lon ?? e.center?.lon;
     if (!tags.name || typeof lat !== 'number' || typeof lon !== 'number' || typeof e.id !== 'number' || !e.type) return [];
-    const street = [tags['addr:street'], tags['addr:housenumber']].filter(Boolean).join(' ');
-    const city = tags['addr:city'] ?? fallbackCity;
-    const address = [street, [tags['addr:postcode'], city].filter(Boolean).join(' ')].filter(Boolean).join(', ');
     return [
-      {
-        id: `osm-${e.type}-${e.id}`,
-        name: tags.name,
+      toDiscoveredPlace(
+        {
+          osmType: e.type,
+          osmId: e.id,
+          name: tags.name,
+          lat,
+          lon,
+          street: tags['addr:street'],
+          houseNumber: tags['addr:housenumber'],
+          postcode: tags['addr:postcode'],
+          city: tags['addr:city'] ?? fallbackCity,
+          tags,
+        },
         typeId,
-        lat,
-        lon,
-        address: address || undefined,
-        city,
-        cuisine: tags.cuisine?.split(';').map((c) => c.replace(/_/g, ' ')).join(', '),
-        website: toSafeUrl(tags.website ?? tags['contact:website']),
-        imageUrl: imageFromTags(tags),
-        osmUrl: `https://www.openstreetmap.org/${e.type}/${e.id}`,
-      },
+      ),
     ];
   });
 }
 
-/** POSTs a query, trying a mirror if the main server is busy. */
+/** One POST with a timeout. Resolves to null when the server is busy or unreachable. */
 export async function runOverpass(query: string, signal?: AbortSignal): Promise<unknown> {
-  for (const endpoint of ENDPOINTS) {
-    try {
-      const response = await fetch(endpoint, { method: 'POST', body: new URLSearchParams({ data: query }), signal });
-      if (response.ok) return await response.json();
-    } catch (error) {
-      if (signal?.aborted) throw error;
-    }
+  const { signal: limited, done } = timeoutSignal(OVERPASS_TIMEOUT_MS, signal);
+  try {
+    const response = await fetch(OVERPASS_URL, { method: 'POST', body: new URLSearchParams({ data: query }), signal: limited });
+    return response.ok ? await response.json() : null;
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    return null;
+  } finally {
+    done();
   }
-  throw new DiscoverError('OpenStreetMap ist gerade nicht erreichbar. Bitte gleich nochmal versuchen.');
 }

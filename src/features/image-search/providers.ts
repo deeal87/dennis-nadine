@@ -31,12 +31,22 @@ function candidate(url: unknown, thumb: unknown, title: string, source: string, 
   return [{ url: safe, thumbUrl: toSafeUrl(str(thumb)) ?? safe, title, source, ...(meta ? { meta } : {}) }];
 }
 
+const REQUEST_TIMEOUT_MS = 8000;
+
+/** GET/POST JSON; a slow or failing source yields null instead of blocking the others. */
 async function getJson(url: string, signal?: AbortSignal, init?: RequestInit): Promise<unknown> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const onAbort = () => controller.abort();
+  signal?.addEventListener('abort', onAbort);
   try {
-    const response = await fetch(url, { ...init, signal });
+    const response = await fetch(url, { ...init, signal: controller.signal });
     return response.ok ? await response.json() : null;
   } catch {
     return null;
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener('abort', onAbort);
   }
 }
 
