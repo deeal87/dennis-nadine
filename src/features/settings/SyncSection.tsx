@@ -16,7 +16,15 @@ import { SYNC_ANCHOR } from '../sync/UnsavedPill';
 
 const timeFormat = new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
 const when = (iso?: string) => (iso ? timeFormat.format(new Date(iso)) : '');
-const TOKEN_URL = 'https://github.com/settings/personal-access-tokens/new';
+const [SYNC_OWNER = '', SYNC_NAME = ''] = SYNC_REPO.split('/');
+/** GitHub pre-fills name, owner, expiry and the Contents permission from these parameters. */
+const TOKEN_URL = `https://github.com/settings/personal-access-tokens/new?${new URLSearchParams({
+  name: 'Dennis Nadine Speichern',
+  description: 'Speichert den verschlüsselten Stand der App',
+  target_name: SYNC_OWNER,
+  expires_in: 'none',
+  contents: 'write',
+})}`;
 
 export function Dot({ className }: { className?: string }) {
   return <span aria-hidden className={cn('inline-block size-2.5 rounded-full bg-danger ring-2 ring-surface', className)} />;
@@ -202,18 +210,23 @@ export function SyncSection() {
           <p className="flex items-center gap-2 font-bold">
             <KeyRound className="size-4 text-violet" aria-hidden /> Einmalig pro Gerät, das speichern soll: GitHub-Schlüssel
           </p>
-          <ol className="list-decimal space-y-1 pl-5 text-muted">
+          <ol className="list-decimal space-y-1.5 pl-5 text-muted">
             <li>
               <a href={TOKEN_URL} target="_blank" rel="noopener noreferrer" className="font-bold text-rose underline-offset-2 hover:underline">
-                Neuen Schlüssel auf GitHub erstellen <ExternalLink className="inline size-3.5" aria-hidden />
+                Schlüssel auf GitHub erstellen <ExternalLink className="inline size-3.5" aria-hidden />
               </a>{' '}
-              (Fine-grained token)
+              (öffnet „Fine-grained token“, Name ist schon ausgefüllt)
             </li>
             <li>
-              Name z. B. „Dennis Nadine“, Ablauf nach Wunsch, <strong>Repository access → Only select repositories → {SYNC_REPO.split('/')[1]}</strong>
+              <strong>Repository access:</strong> „<strong>Only select repositories</strong>“ → <strong>{SYNC_NAME}</strong> auswählen.{' '}
+              <span className="text-danger">Nicht „Public repositories“ – damit darf der Schlüssel nur lesen.</span>
             </li>
             <li>
-              <strong>Permissions → Contents → Read and write</strong>, dann „Generate token“ und hier einfügen:
+              <strong>Permissions:</strong> „Add permissions“ → <strong>Contents</strong> → Access „<strong>Read and write</strong>“ (steht es schon da,
+              passt es).
+            </li>
+            <li>
+              Ganz unten „<strong>Generate token</strong>“, Schlüssel kopieren und hier einfügen:
             </li>
           </ol>
           <div className="flex gap-2">
