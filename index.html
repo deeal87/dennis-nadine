@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="Dennis ❤️ Nadine – Baby & Babe. Unsere kleine Anime-Welt." />
+    <meta name="theme-color" content="#fcf7f3" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <title>Dennis ❤️ Nadine – Unsere kleine Anime-Welt</title>
+    <script>
+      // Apply the saved theme before first paint to avoid a light flash at night.
+      (function () {
+        try {
+          var pref = localStorage.getItem('dn-theme') || 'system';
+          var dark = pref === 'dark' || (pref === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+          if (dark) document.documentElement.classList.add('dark');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>Diese kleine Welt braucht JavaScript, um zu leuchten ✨</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
