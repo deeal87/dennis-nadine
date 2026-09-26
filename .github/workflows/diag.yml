@@ -5,13 +5,8 @@ jobs:
     if: github.ref_name == 'claude/diag-apis'
     runs-on: ubuntu-latest
     steps:
-      - run: |
-          curl -s https://deeal87.github.io/dennis-nadine/ -o index.html
-          grep -o 'assets/[^"]*\.js' index.html
-          for js in $(grep -o 'assets/[^"]*\.js' index.html); do curl -s "https://deeal87.github.io/dennis-nadine/$js" -o "$(basename $js)"; done
-          echo "--- settings chunk:"; grep -o 'assets/SettingsPage-[A-Za-z0-9_-]*\.js' *.js | head -3
-          S=$(grep -oh 'SettingsPage-[A-Za-z0-9_-]*\.js' *.js | head -1); echo "$S"; curl -s "https://deeal87.github.io/dennis-nadine/assets/$S" -o settings.js
-          grep -l "Speichern & auf allen" *.js || echo "SECTION TEXT NOT FOUND"
-          (grep -oh "deeal87/dennis-nadine" *.js || echo "REPO NOT FOUND") | sort | uniq -c
-          grep -oh '"sync-data"' *.js | sort | uniq -c
-          (grep -oh "VITE_SYNC_REPO[^,;]*" *.js || true) | head
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm i --no-save playwright@1.56.1 && npx playwright install --with-deps chromium
+      - run: node e2e/live-settings.mjs
